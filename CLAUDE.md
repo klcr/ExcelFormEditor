@@ -1,111 +1,250 @@
-# DDD Scaffold Templates
+# Excel Form Editor
 
 ## プロジェクト概要
 
-DDD（ドメイン駆動設計）+ レイヤードアーキテクチャのプロジェクトを新規構築するためのスキャフォールディングテンプレート集。技術スタック（言語・フレームワーク）に依存しない汎用的な設計パターンを提供する。
+Excelで作成された帳票ファイルを入力とし、Webシステムで利用可能なCSS帳票テンプレートに変換するツール。変換後の帳票はボックスモデルとして再定義され、GUI上でレイアウト調整・変数定義を行ったうえでシステムにインポートして運用する。
 
-## 使い方
+**方針: 「80%自動・20%手動調整」** — 完全自動変換は目指さない。自動変換で大枠を作り、エディタで仕上げる。
+
+## アーキテクチャ
+
+- DDD（ドメイン駆動設計）+ レイヤードアーキテクチャ
+- フロントエンド: React + Vite
+- リンター/フォーマッター: Biome
+- テスト: Vitest
+
+## パッケージ構成
+
+- `src/domain/` — ドメイン層（型定義、エンティティ、ビジネスルール）。外部依存ゼロ。
+- `src/web/` — React + Vite（デスクトップ UI）
+
+### ドメイン層の集約
+
+| 集約 | 責務 |
+|------|------|
+| `excel/` | .xlsx パース、印刷エリア取得、セル情報抽出 |
+| `box/` | ボックスモデル定義（位置・サイズ・スタイル・変数） |
+| `line/` | 線分モデル定義（始点・終点・線種・色） |
+| `paper/` | 用紙サイズ定義、座標変換（Excel単位 → mm） |
+| `shared/` | 共通型定義（座標、サイズ等） |
+
+## ビルドコマンド
+
+- `npm run build` — 全パッケージビルド
+- `npm run test` — 全テスト実行
+- `npm run lint` — Biome lint
+- `npm run type-check` — TypeScript 型チェック
+- `npm run format` — Biome フォーマット
+- `npm run check-all` — lint + 型チェック + テスト（CI 相当）
+
+## 設計原則
+
+### コード原則
+
+1. 1ファイル1責務。500行超は分割必須。
+2. ディレクトリ構造が設計を語る。
+3. 型定義を信頼の源とする。
+4. テストは対象ファイルの隣に配置（`.test.ts` / `.test.tsx`）。
+5. ドメイン層は外部依存ゼロ。
+
+### アーキテクチャ原則
+
+| # | 原則 | 要点 |
+|---|------|------|
+| 1 | **責務の分離** | 一つの知識を複数モジュールが重複して持たない |
+| 2 | **参照はするが書き戻さない** | 他コンテキストのデータはスナップショット取得のみ |
+| 3 | **段階導入と独立動作** | 各モジュールは他が未導入でも単独で動く |
+| 4 | **ワンファクト・マルチビュー** | データは発生元で1度だけ記録。各モジュールは異なる視座で表示 |
+| 5 | **共通識別子による横断** | 全モジュール共通の識別子で横断参照の基盤を作る |
+
+詳細と違反例は `docs/design-principles.md` を参照。
+
+## ファイル命名規約
+
+- ドメイン層: PascalCase（`Box.ts`, `ExcelParser.ts`）
+- React コンポーネント: PascalCase（`BoxEditor.tsx`, `PreviewCanvas.tsx`）
+- フック: camelCase + `use` プレフィックス（`useBoxEditor.ts`）
+- ユーティリティ: camelCase（`svgHelpers.ts`）
+
+## コミットメッセージ規約
 
 ```
-/project:init-scaffold
+{type}({scope}): {summary}
 ```
 
-Claude Code が対話的にヒアリングし、フォルダ構造・設定ファイル・CLAUDE.md・ガードレール一式を生成する。
+- `type`: `feat` / `fix` / `docs` / `chore` / `refactor` / `test`
+- `scope`: 影響するパッケージ名（`domain` / `web` / `root` 等）
+- `summary`: 変更内容の要約
 
-## リポジトリ構成
+---
 
-- `.claude/commands/init-scaffold.md` — メインの slash command
-- `scaffold-templates/` — テンプレートファイル群（24 ファイル）
+## ガードレール
+
+品質を機械的に担保するための仕組み。AIへのコンテキスト提供と自動チェックの両方で機能する。
+
+### ガードレール①: slash command によるコンテキスト構造化
+
+`.claude/commands/` にレイヤー × 機能単位の slash command を用意。
+Claude に作業させる際は必ず対応する `/command` を起点にすること。
+
+| コマンド | 用途 |
+| --- | --- |
+| `/project:add-domain-entity` | ドメイン層へのエンティティ追加 |
+| `/project:add-web-feature` | Web UI へのフィーチャー追加 |
+| `/project:review` | 設計レビュー（ガイドライン違反チェック） |
+
+### ガードレール②: 依存方向の制御
+
+**許可される依存方向:**
+
+- `src/web/` → `src/domain/`（型のみ）
+
+**禁止される依存:**
+
+- `src/domain/` → 他の全レイヤー（外部依存ゼロ）
+- 循環依存: 禁止
+
+**データ境界:**
+
+- 各ドメイン（境界づけられたコンテキスト）のデータは専用ストレージに格納する
+- 他ドメインのストレージに直接書き込まない
+
+### ガードレール③: レイヤーごとのテスト原則
+
+**Domain 層 (`src/domain/`)**
+
+- 原則: **全ロジックにユニットテストを書く**
+- カバレッジ目標: 90% 以上
+- テスト対象: エンティティのメソッド、変換ロジック、バリデーション
+- モック: 原則不要（外部依存ゼロのため）
+
+**Web UI 層 (`src/web/`)**
+
+- 原則: コンポーネント単体テスト
+- ビジネスロジックは Domain 層に置き、UI テストを軽量に保つ
+
+### ガードレール④: Git フックによる品質チェック
 
 ```
-scaffold-templates/
-├── README.md               # テンプレート全体の説明
-├── root/                   # プロジェクトルートのテンプレート
-│   ├── claude-md.md
-│   ├── gitignore.md
-│   ├── progress-md.md
-│   └── readme.md
-├── layers/                 # レイヤー別 CLAUDE.md テンプレート
-│   ├── domain/claude-md.md
-│   ├── api/claude-md.md
-│   ├── web/claude-md.md
-│   └── mobile/claude-md.md
-├── commands/               # slash command テンプレート
-│   ├── add-domain-entity.md
-│   ├── add-usecase.md
-│   ├── add-api-endpoint.md
-│   ├── add-web-feature.md
-│   ├── add-mobile-feature.md
-│   └── review.md
-├── docs/                   # ドキュメントテンプレート
-│   ├── design-principles.md #  設計原則・並行開発ルール・コミット規約
-│   ├── backlog.md          #   未実装項目管理
-│   ├── environment-notes.md #  環境固有の留意事項
-│   ├── constraints-readme.md
-│   ├── issues-readme.md
-│   ├── adr-template.md
-│   └── milestones.md
-└── guardrails/             # ガードレール設計テンプレート
-    ├── dependency-rules.md
-    └── git-hooks.md
+git commit → pre-commit: 変更ファイルのみ Biome check + format
+git push   → pre-push:   全体 Biome lint + 型チェック
+CI         → 全チェック（lint / type-check / test）
 ```
 
-## テンプレート記法
+### ガードレール⑤: `/project:review` コマンドによるレビュー
 
-### プレースホルダー
+コミット前に `/project:review` を実行し、設計ガイドライン違反がないか確認する。
 
-`{{VARIABLE}}` — Claude がヒアリング結果で置換する変数。主要な変数:
+**レビューの8次元:**
 
-- `{{PROJECT_NAME}}` — プロジェクト名
-- `{{PROJECT_DESCRIPTION}}` — プロジェクト概要
-- `{{SCOPE_NAME}}` — パッケージスコープ名
-- `{{LANGUAGE}}` — 主要言語
-- `{{API_FRAMEWORK}}` — API フレームワーク
-- `{{DOMAIN_DIR}}`, `{{API_DIR}}`, `{{WEB_DIR}}`, `{{MOBILE_DIR}}` — 各レイヤーのディレクトリパス
+1. **アーキテクチャ/依存方向** — 禁止方向の import がないか
+2. **レイヤー責務** — 正しいレイヤーに配置されているか
+3. **知識の分離** — 責務境界を越えてデータを重複保持していないか
+4. **テスト** — Domain 90%+、UI 軽量
+5. **型定義** — domain パッケージの型が適切か
+6. **命名規則** — プロジェクトの命名パターンに準拠しているか
+7. **ファイルサイズ** — 500行以下
+8. **制約ドキュメント** — 共通パッケージ変更時に記録したか
 
-全変数一覧は `scaffold-templates/README.md` を参照。
+### ガードレール⑥: 制約条件の記録（`docs/constraints/`）
 
-### 条件ブロック
+実装過程で発見・決定された制約条件は `docs/constraints/` に記録する。
 
-`<!-- IF: CONDITION -->` 〜 `<!-- ENDIF -->` — 条件付きで含める/除外するセクション。
+**対象:**
 
-- `HAS_API_LAYER`, `HAS_WEB_LAYER`, `HAS_MOBILE_LAYER` — レイヤーの有無
-- `IS_TYPESCRIPT`, `IS_PYTHON`, `IS_GO` — 言語判定
-- `HAS_MONOREPO`, `HAS_DEP_CHECK`, `HAS_FORMATTER` — ツールの有無
+- 暫定措置（後で解消が必要な技術的制約）
+- 設計判断により生じた制約（トレードオフの選択）
+- レイヤー間の結合に関する取り決め
+- 外部依存・インフラに起因する制限
 
-## 対応言語・フレームワーク
+**ルール:**
 
-| カテゴリ | 選択肢 |
-|---------|-------|
-| 言語 | TypeScript / Python / Go |
-| モノレポ | Turborepo / Nx / none |
-| API | Azure Functions / Express / Hono / FastAPI / Gin / none |
-| Web UI | React+Vite / Next.js / Vue / none |
-| Mobile | React Native / Flutter / none |
-| テスト | Vitest / Jest / pytest / go test |
-| リンター | ESLint / Biome / Ruff / golangci-lint |
-| フォーマッター | Prettier / Biome / Black / gofmt / none |
-| 依存チェック | dependency-cruiser / import-linter / none |
+1. 新しい制約が生じたら `docs/constraints/{連番3桁}-{kebab-case}.md` を作成
+2. テンプレート（`docs/constraints/README.md` 参照）に従い、背景・詳細・影響範囲・今後の対応を記述
+3. `docs/constraints/README.md` の一覧テーブルにも追記
+4. 制約が解消された場合は、ドキュメント内に「解消日」と「解消方法」を追記し、一覧テーブルの状態を「解消」に変更
 
-## 生成されるガードレール（12 種）
+### ガードレール⑦: 事象管理（`docs/issues/`）
 
-1. **slash command によるコンテキスト構造化** — `.claude/commands/` に定型操作コマンドを配置
-2. **依存方向の制御** — レイヤー間の依存方向・データ境界・モジュール間連携を機械的にチェック
-3. **レイヤーごとのテスト原則** — Domain 90%+, Application 全フロー, UI 軽量
-4. **Git フックによる品質チェック** — pre-commit: lint, pre-push: 全体チェック, CI デバッグの教訓
-5. **レビューコマンド** — `/project:review` で8次元のガイドライン違反を検出
-6. **制約条件の記録** — `docs/constraints/` に設計判断を蓄積（実例パターン付き）
-7. **事象管理** — `docs/issues/` にブロッカーを記録・追跡（エスカレーション基準付き）
-8. **クロスプラットフォーム開発環境の保護** — lockfile 汚染防止ルール
-9. **進捗管理** — `PROGRESS.md` で全体進捗・フェーズ状態・迷走検知を管理
-10. **設計原則とエスカレーション** — `docs/design-principles.md` で設計原則・並行開発ルール・コミット規約・エスカレーション基準を定義
-11. **未実装項目管理** — `docs/backlog/` で4状態（未着手→着手可能→進行中→完了）追跡
-12. **環境固有の留意事項** — `docs/environment-notes.md` で OS・CI・クラウド固有の問題と対策を蓄積
+実装中に発生したブロッカーや課題を `docs/issues/` に記録する。
 
-## テンプレートの編集
+**対象:**
 
-テンプレートを編集する際は以下に注意:
+- 実装の詰まり（技術的なブロッカー）
+- 原因調査中の不具合
+- 外部要因による作業停滞
 
-1. プレースホルダー `{{VAR}}` の命名は `scaffold-templates/README.md` の一覧に合わせる
-2. 条件ブロック `<!-- IF: CONDITION -->` は対応する `<!-- ENDIF -->` を必ず閉じる
-3. テンプレート内の markdown コードブロック（` ``` `）が実際に生成されるファイルの内容
+**ルール:**
+
+1. 新しい事象が発生したら `docs/issues/reports/{連番3桁}-{kebab-case}.md` を作成
+2. テンプレート（`docs/issues/README.md` 参照）に従い、発生状況・調査経緯を記述
+3. `docs/issues/README.md` の一覧テーブルにも追記
+4. 事象が解決したかどうかはユーザーが判定する。解決確認後、レポートに「解決日」と「解決方法」を追記し、一覧テーブルの状態を「解決済」に変更
+
+### ガードレール⑧: クロスプラットフォーム開発環境の保護
+
+Claude Code は Linux 上で動作する。ユーザーの開発環境（Windows/macOS）との差異により問題が発生しうる。
+
+**ルール:**
+
+1. lockfile（package-lock.json）を不必要に変更しない
+2. パッケージの追加・削除時のみ lockfile を更新する
+3. やむを得ず変更した場合は `git checkout -- package-lock.json` で復元する
+4. lockfile の変更は原則コミットしない（例外: ユーザーが明示的にパッケージ操作を指示した場合のみ）
+
+### ガードレール⑨: 進捗管理（`PROGRESS.md`）
+
+プロジェクトルートの `PROGRESS.md` がこのプロジェクトの進捗の正本である。
+
+#### 読み出しルール
+
+- プロジェクト進捗を聞かれたら、最初に `PROGRESS.md` を読む
+- 「前回からの差分」を聞かれたら `## diff` セクションを提示する
+- 詳細が必要なら `docs/constraints/`、`docs/issues/`、`docs/adr/` を参照する
+
+#### 書き込みルール
+
+フェーズの状態・進捗が変わったら `PROGRESS.md` を更新する。手順:
+
+1. 現在の diff を `<details>` に退避
+2. スナップショット部を書き換える
+3. 書き換え前後から新しい diff ブロックを作成する
+4. ヘッダーの日付を更新する
+
+#### 更新するタイミング
+
+- フェーズの状態が変わった
+- フェーズの進捗が 10% 以上変動した
+- ブロッカーが増減した
+- 新しいフェーズが追加された
+
+#### 迷走検知
+
+PROGRESS.md を読んだ際、以下に該当するフェーズがあれば進捗報告の冒頭で警告する。
+
+| パターン | 条件 | アクション |
+|---------|------|-----------|
+| 停滞 | `active` で最終変動が 14日以上前 | スコープ縮小 or ブロッカー昇格を提案 |
+| 長期ブロック | `blocked` で最終変動が 21日以上前 | 解消見込みの確認 or 迂回策を提案 |
+| ブロッカー純増 | diff でブロッカーの追加 > 削除 | 純増している旨を報告 |
+| 後退 | 進捗が前回より下がった | 手戻り原因の確認を促す |
+
+### ガードレール⑩: 設計原則とエスカレーション（`docs/design-principles.md`）
+
+プロジェクトの設計原則・並行開発ルール・コミット規約・エスカレーション基準を `docs/design-principles.md` に定義する。
+
+Issue/PR の起票時に「この変更はどの原則に基づくか」を明示させる。
+
+### ガードレール⑪: 未実装項目管理（`docs/backlog/`）
+
+実装予定だが未着手の項目を `docs/backlog/` で管理する。4状態（未着手→着手可能→進行中→完了）で追跡し、前提条件の充足状況と担当を明記する。
+
+### ガードレール⑫: 環境固有の留意事項（`docs/environment-notes.md`）
+
+OS・CI 環境・クラウドサービスに起因する問題と対策を `docs/environment-notes.md` に蓄積する。
+
+---
+
+## scaffold-templates について
+
+`scaffold-templates/` ディレクトリには DDD プロジェクトスキャフォールディング用のテンプレートが含まれる。これはプロジェクト生成ツールの一部であり、Excel Form Editor のアプリケーションコードとは独立している。テンプレートの詳細は `scaffold-templates/README.md` を参照。

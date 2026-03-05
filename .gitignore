@@ -1,6 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# Test coverage
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
 .DS_Store
 Thumbs.db
+
+# IDE
 *.swp
 *.swo
 .vscode/
 .idea/
+
+# Misc
+*.log
