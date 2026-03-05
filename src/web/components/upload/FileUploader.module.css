@@ -1,0 +1,86 @@
+.container {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 24px 16px;
+  background: none;
+  border: 2px dashed var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.dropZone:hover,
+.dropZoneDragOver {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-light);
+}
+
+.dropZoneText {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.dropZoneHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.fileInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background-color: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.fileName {
+  font-size: 14px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 8px;
+}
+
+.clearButton {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--color-danger);
+  background: none;
+  border: 1px solid var(--color-danger);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.clearButton:hover {
+  background-color: var(--color-danger);
+  color: var(--color-paper);
+}

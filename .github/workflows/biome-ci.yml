@@ -1,0 +1,32 @@
+name: Biome CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  biome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Biome lint
+        run: npm run lint
+
+      - name: Biome format check
+        run: npx biome format src/
+
+      - name: TypeScript type check
+        run: npm run type-check
