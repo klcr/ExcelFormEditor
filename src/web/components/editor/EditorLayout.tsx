@@ -1,0 +1,95 @@
+import type { BoxDefinition } from '@domain/box';
+import type { LineDefinition } from '@domain/line';
+import type { PaperDefinition } from '@domain/paper';
+import { PAPER_DIMENSIONS } from '@domain/paper';
+import { useBoxEditor } from '@web/hooks/useBoxEditor';
+import { useKeyboardShortcuts } from '@web/hooks/useKeyboardShortcuts';
+import { useSnap } from '@web/hooks/useSnap';
+import { MergeAction } from './BoxEditor/MergeAction';
+import { SplitAction } from './BoxEditor/SplitAction';
+import { EditorCanvas } from './EditorCanvas';
+import { PropertyPanel } from './PropertyPanel/PropertyPanel';
+
+type EditorLayoutProps = {
+  readonly boxes: readonly BoxDefinition[];
+  readonly lines: readonly LineDefinition[];
+  readonly paper: PaperDefinition | null;
+};
+
+/**
+ * エディタのメイン構成コンポーネント。
+ * ツールバー、キャンバス、プロパティパネルを統合する。
+ */
+export function EditorLayout({ boxes: initialBoxes, lines: _lines, paper }: EditorLayoutProps) {
+  const snap = useSnap();
+  const { selectedBoxIds, boxes, isDragging, canUndo, canRedo, activeGuides, actions } =
+    useBoxEditor(initialBoxes, { snap });
+
+  useKeyboardShortcuts({
+    actions: {
+      undo: actions.undo,
+      redo: actions.redo,
+      deleteSelectedBoxes: actions.deleteSelectedBoxes,
+      deselectAll: actions.deselectAll,
+    },
+  });
+
+  const paperWidth = paper
+    ? paper.orientation === 'landscape'
+      ? PAPER_DIMENSIONS[paper.size].height
+      : PAPER_DIMENSIONS[paper.size].width
+    : 210;
+
+  const paperHeight = paper
+    ? paper.orientation === 'landscape'
+      ? PAPER_DIMENSIONS[paper.size].width
+      : PAPER_DIMENSIONS[paper.size].height
+    : 297;
+
+  return (
+    <div
+      data-testid="editor-layout"
+      style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+    >
+      <div
+        data-testid="editor-toolbar"
+        style={{ display: 'flex', gap: '8px', padding: '8px', borderBottom: '1px solid #ccc' }}
+      >
+        <SplitAction selectedBoxIds={selectedBoxIds} boxes={boxes} onSplit={actions.splitBox} />
+        <MergeAction
+          selectedBoxIds={selectedBoxIds}
+          boxes={boxes}
+          onMerge={actions.mergeSelectedBoxes}
+        />
+        <button type="button" data-testid="undo-button" disabled={!canUndo} onClick={actions.undo}>
+          元に戻す
+        </button>
+        <button type="button" data-testid="redo-button" disabled={!canRedo} onClick={actions.redo}>
+          やり直す
+        </button>
+      </div>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div style={{ flex: 1 }}>
+          <EditorCanvas
+            boxes={boxes}
+            selectedBoxIds={selectedBoxIds}
+            isDragging={isDragging}
+            activeGuides={activeGuides}
+            onSelectBox={actions.selectBox}
+            onDeselectAll={actions.deselectAll}
+            paperWidth={paperWidth}
+            paperHeight={paperHeight}
+          />
+        </div>
+        <div style={{ width: '280px', borderLeft: '1px solid #ccc', overflow: 'auto' }}>
+          <PropertyPanel
+            selectedBoxIds={selectedBoxIds}
+            boxes={boxes}
+            onMove={actions.moveSelectedBoxes}
+            onResize={actions.resizeBox}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
