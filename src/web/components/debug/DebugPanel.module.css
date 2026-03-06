@@ -1,0 +1,147 @@
+.panel {
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.loading {
+  color: var(--color-accent);
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.error {
+  color: var(--color-danger);
+  padding: 12px;
+  background: #fef2f2;
+  border-radius: 4px;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.meta {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 8px;
+}
+
+.tab {
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.tabActive {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section {
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.sectionTitle {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-sidebar-bg);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sectionContent {
+  padding: 8px 10px;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 12px;
+}
+
+.dl dt {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.dl dd {
+  font-weight: 500;
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.list li {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table th,
+.table td {
+  padding: 3px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.cellValue {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noData {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
