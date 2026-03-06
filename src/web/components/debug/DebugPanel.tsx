@@ -1,4 +1,8 @@
-import type { ExcelParseResult, SheetParseResult } from '@web/services/parseExcelFile';
+import type {
+  ExcelParseResult,
+  FullParseResult,
+  SheetParseResult,
+} from '@web/services/parseExcelFile';
 import { paperSizeLabel } from '@web/services/parseExcelFile';
 import { useState } from 'react';
 import styles from './DebugPanel.module.css';
@@ -7,7 +11,7 @@ type DebugPanelProps = {
   readonly parseState:
     | { readonly status: 'idle' }
     | { readonly status: 'parsing' }
-    | { readonly status: 'success'; readonly result: ExcelParseResult }
+    | { readonly status: 'success'; readonly result: FullParseResult }
     | { readonly status: 'error'; readonly error: string };
 };
 
@@ -38,7 +42,7 @@ export function DebugPanel({ parseState }: DebugPanelProps) {
     );
   }
 
-  return <ParseResultView result={parseState.result} />;
+  return <ParseResultView result={parseState.result.debug} />;
 }
 
 function ParseResultView({ result }: { readonly result: ExcelParseResult }) {

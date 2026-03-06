@@ -1,3 +1,4 @@
+import type { ParsedSheet } from '@domain/excel';
 import { createPaperDefinition } from '@domain/paper';
 import { AppLayout } from '@web/components/common/AppLayout';
 import { Header } from '@web/components/common/Header';
@@ -19,6 +20,12 @@ export function App() {
   const { file, handleFileSelect, clearFile } = useFileUpload();
   const { parseState } = useExcelParse(file);
 
+  const firstSheet: ParsedSheet | undefined =
+    parseState.status === 'success' ? parseState.result.parsed[0] : undefined;
+
+  const paper = firstSheet?.paper ?? defaultPaper;
+  const boxes = firstSheet?.boxes ?? [];
+
   return (
     <AppLayout
       header={<Header />}
@@ -29,7 +36,7 @@ export function App() {
       }
       main={
         <>
-          <PreviewCanvas paper={defaultPaper} />
+          <PreviewCanvas paper={paper} boxes={boxes} />
           <DebugPanel parseState={parseState} />
         </>
       }

@@ -1,11 +1,14 @@
+import type { BoxDefinition } from '@domain/box';
 import { INCHES_TO_MM, type PaperDefinition, getPaperDimensions } from '@domain/paper';
+import { borderStyleToStrokeDasharray, borderStyleToStrokeWidth } from '@web/utils/svgHelpers';
 import styles from './PreviewCanvas.module.css';
 
 type PreviewCanvasProps = {
   readonly paper: PaperDefinition | null;
+  readonly boxes?: readonly BoxDefinition[];
 };
 
-export function PreviewCanvas({ paper }: PreviewCanvasProps) {
+export function PreviewCanvas({ paper, boxes = [] }: PreviewCanvasProps) {
   if (!paper) {
     return (
       <div className={styles.container}>
@@ -54,6 +57,11 @@ export function PreviewCanvas({ paper }: PreviewCanvasProps) {
           strokeWidth={0.3}
           strokeDasharray="2 2"
         />
+        <g transform={`translate(${marginLeft}, ${marginTop})`}>
+          {boxes.map((box) => (
+            <BoxSvg key={box.id} box={box} />
+          ))}
+        </g>
         <text
           x={dimensions.width / 2}
           y={dimensions.height - 4}
@@ -65,5 +73,111 @@ export function PreviewCanvas({ paper }: PreviewCanvasProps) {
         </text>
       </svg>
     </div>
+  );
+}
+
+function BoxSvg({ box }: { readonly box: BoxDefinition }) {
+  const { x, y } = box.rect.position;
+  const { width, height } = box.rect.size;
+  const fontSize = Math.min(box.font.sizePt * 0.3528, height * 0.8);
+
+  return (
+    <g>
+      {box.fill && <rect x={x} y={y} width={width} height={height} fill={`#${box.fill.color}`} />}
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={box.fill ? 'none' : 'transparent'}
+        stroke="none"
+      />
+      {box.border.top && (
+        <line
+          x1={x}
+          y1={y}
+          x2={x + width}
+          y2={y}
+          stroke={`#${box.border.top.color}`}
+          strokeWidth={borderStyleToStrokeWidth(box.border.top.style)}
+          strokeDasharray={borderStyleToStrokeDasharray(box.border.top.style)}
+        />
+      )}
+      {box.border.bottom && (
+        <line
+          x1={x}
+          y1={y + height}
+          x2={x + width}
+          y2={y + height}
+          stroke={`#${box.border.bottom.color}`}
+          strokeWidth={borderStyleToStrokeWidth(box.border.bottom.style)}
+          strokeDasharray={borderStyleToStrokeDasharray(box.border.bottom.style)}
+        />
+      )}
+      {box.border.left && (
+        <line
+          x1={x}
+          y1={y}
+          x2={x}
+          y2={y + height}
+          stroke={`#${box.border.left.color}`}
+          strokeWidth={borderStyleToStrokeWidth(box.border.left.style)}
+          strokeDasharray={borderStyleToStrokeDasharray(box.border.left.style)}
+        />
+      )}
+      {box.border.right && (
+        <line
+          x1={x + width}
+          y1={y}
+          x2={x + width}
+          y2={y + height}
+          stroke={`#${box.border.right.color}`}
+          strokeWidth={borderStyleToStrokeWidth(box.border.right.style)}
+          strokeDasharray={borderStyleToStrokeDasharray(box.border.right.style)}
+        />
+      )}
+      {box.content && (
+        <text
+          x={
+            x +
+            (box.alignment.horizontal === 'center'
+              ? width / 2
+              : box.alignment.horizontal === 'right'
+                ? width - 0.5
+                : 0.5)
+          }
+          y={
+            y +
+            (box.alignment.vertical === 'middle'
+              ? height / 2
+              : box.alignment.vertical === 'bottom'
+                ? height - 0.5
+                : fontSize)
+          }
+          textAnchor={
+            box.alignment.horizontal === 'center'
+              ? 'middle'
+              : box.alignment.horizontal === 'right'
+                ? 'end'
+                : 'start'
+          }
+          dominantBaseline={
+            box.alignment.vertical === 'middle'
+              ? 'central'
+              : box.alignment.vertical === 'bottom'
+                ? 'auto'
+                : 'hanging'
+          }
+          fontSize={fontSize}
+          fontFamily={box.font.name}
+          fontWeight={box.font.bold ? 'bold' : 'normal'}
+          fontStyle={box.font.italic ? 'italic' : 'normal'}
+          fill={`#${box.font.color}`}
+          clipPath="inset(0 0 0 0)"
+        >
+          {box.content}
+        </text>
+      )}
+    </g>
   );
 }
