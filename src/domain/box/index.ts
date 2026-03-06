@@ -25,6 +25,7 @@ export {
   splitBoxHorizontal,
   splitBoxVertical,
 } from './BoxOperations';
+export { generateBoxCss } from './CssGenerator';
 export { mergeBoxes, validateMerge } from './BoxMerge';
 export type { MergeValidation } from './BoxMerge';
 export { EMPTY_SNAP_GUIDE_RESULT, applySnap, findSnapGuides } from './SnapGuide';

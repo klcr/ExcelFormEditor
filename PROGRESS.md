@@ -4,8 +4,8 @@
 
 ## スナップショット
 
-- **全体進捗**: 55%（Phase 1 完了、Phase 2 着手）
-- **アクティブフェーズ**: Phase 2 — 調整エディタ
+- **全体進捗**: 90%（Phase 1 完了、Phase 2-4 ほぼ完了）
+- **アクティブフェーズ**: Phase 4 — レイアウト微調整 UI（残: PaddingSection, エクスポート機能）
 - **ブロッカー**: なし
 - **最終変動日**: 2026-03-06
 
@@ -15,9 +15,9 @@
 |---|---------|------|------|---------|------|
 | 0 | プロジェクト基盤セットアップ | done | 100% | 2026-03-06 | 完了 |
 | 1 | Excel パーサー + プレビュー | done | 100% | 2026-03-06 | 統合テスト完了。Backlog 001 全チェック完了 |
-| 2 | 調整エディタ | active | 40% | 2026-03-06 | Step A（基本操作）完了。Step B/C 未着手 |
-| 3 | 変数バインディングと型定義 | not-started | 0% | — | テンプレート変数 + TS interface 生成 |
-| 4 | レイアウト微調整 UI | not-started | 0% | — | フォント・色・揃え・罫線設定 |
+| 2 | 調整エディタ | done | 100% | 2026-03-06 | Step A/B/C 全完了。EditorLayout統合済み |
+| 3 | 変数バインディングと型定義 | done | 100% | 2026-03-06 | Variable集約、VariableBindingSection、InterfacePreview、VariableListPanel |
+| 4 | レイアウト微調整 UI | active | 80% | 2026-03-06 | Border/Text/Fill完了、CSSジェネレータ/プレビュー完了。残: Padding, エクスポート |
 
 ## ブロッカー
 
@@ -30,11 +30,31 @@
 
 ## 次のアクション
 
-1. Phase 2: Step B — スナップガイド、ボックス分割・結合、Undo/Redo
-2. Phase 2: Step C — プロパティパネル（位置・サイズ・罫線・テキストスタイル）
-3. Phase 3: 変数バインディングの設計・着手
+1. Phase 4 残り: PaddingSection（余白設定 UI）
+2. Phase 4 残り: エクスポート機能（HTML + CSS 出力）
+3. `/project:review` で設計レビュー実施
 
 ## diff
+
+```diff
+# Wave 0-3 並列エージェント実装（2026-03-06）
+- 全体進捗: 55%
++ 全体進捗: 90%
+- Phase 2: active / 40%（Step A 完了、Step B/C 未着手）
++ Phase 2: done / 100%（Step A/B/C 全完了、EditorLayout統合済み）
+- Phase 3: not-started / 0%
++ Phase 3: done / 100%（Variable集約、VariableBindingSection、InterfacePreview）
+- Phase 4: not-started / 0%
++ Phase 4: active / 80%（Border/Text/Fill/CSSジェネレータ完了、残: Padding/エクスポート）
++ Wave 0: useBoxEditor拡張（Undo/Redo, Snap, Split/Merge, Delete統合）
++ Wave 1: EditorCanvas, SplitAction/MergeAction, PropertyPanel基盤, Variable集約
++ Wave 2: KeyboardShortcuts, BorderSection/TextStyleSection, VariableBindingSection/VariableListPanel/InterfacePreview
++ Wave 3: EditorLayout統合, App.tsxモード切替, CssGenerator, FillSection, CssPreview
++ 全445テスト パス（41テストファイル）— build + check-all 通過
+```
+
+<details>
+<summary>前回の diff（2026-03-06: 整合性検証）</summary>
 
 ```diff
 # 整合性検証による修正（2026-03-06）
@@ -43,8 +63,10 @@
 + 事象 002 の記述を実際の issue レポート（002-layout-rendering-issues.md）と整合させた
 ```
 
+</details>
+
 <details>
-<summary>前回の diff（2026-03-06: ブロッカー解消）</summary>
+<summary>前々回の diff（2026-03-06: ブロッカー解消）</summary>
 
 ```diff
 # ブロッカー解消（2026-03-06）
@@ -56,22 +78,6 @@
 + formatCellValue.test.ts: テスト計算書.xlsx 依存を除去
 + 見積書フィクスチャ（createEstimateWorkbook.ts）を追加
 + 事象 002 解決済み
-```
-
-</details>
-
-<details>
-<summary>前々回の diff（2026-03-06: 整合性検証）</summary>
-
-```diff
-# 整合性検証による修正（2026-03-06）
-- 全 509 テスト パス（check-all 通過見込み）
-+ 全 288 テスト（285 passed / 3 failed）— check-all 未通過
-+ Lint: noNonNullAssertion 違反あり（ExcelParser.ts, parseExcelFile.ts 等）
-+ テスト失敗: formatCellValue.test.ts — テスト計算書.xlsx 不在（3件）
-+ 事象 002 追加: テストの外部ファイル依存
-+ ブロッカー追加: check-all 未通過
-+ 次のアクション先頭に check-all 修正を追加
 ```
 
 </details>
