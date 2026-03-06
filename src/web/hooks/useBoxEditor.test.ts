@@ -71,10 +71,12 @@ describe('useBoxEditor', () => {
     const { result } = renderHook(() => useBoxEditor([makeBox('b1', 0, 0, 20, 15)]));
 
     act(() => result.current.actions.resizeBox('b1', { width: 30, height: 25 }));
-    expect(result.current.boxes[0].rect.size).toEqual({ width: 30, height: 25 });
+    const box1 = result.current.boxes[0];
+    expect(box1?.rect.size).toEqual({ width: 30, height: 25 });
 
     act(() => result.current.actions.resizeBox('b1', { width: 0.5, height: 0.5 }));
-    expect(result.current.boxes[0].rect.size).toEqual({ width: 2, height: 2 });
+    const box1After = result.current.boxes[0];
+    expect(box1After?.rect.size).toEqual({ width: 2, height: 2 });
   });
 
   it('setDragging updates isDragging state', () => {
@@ -93,6 +95,7 @@ describe('useBoxEditor', () => {
     const newBoxes = [makeBox('b2'), makeBox('b3')];
     act(() => result.current.actions.setBoxes(newBoxes));
     expect(result.current.boxes).toHaveLength(2);
-    expect(result.current.boxes[0].id).toBe('b2');
+    const first = result.current.boxes[0];
+    expect(first?.id).toBe('b2');
   });
 });

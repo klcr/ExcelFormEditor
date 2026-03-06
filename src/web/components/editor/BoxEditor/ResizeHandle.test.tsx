@@ -136,7 +136,8 @@ describe('ResizeHandle', () => {
     fireEvent.mouseMove(document, { clientX: -100, clientY: -100 });
 
     expect(onResize).toHaveBeenCalled();
-    const lastCall = onResize.mock.calls.at(-1)?.[0];
+    const calls = onResize.mock.calls;
+    const lastCall = calls[calls.length - 1][0];
     expect(lastCall.width).toBeGreaterThanOrEqual(2);
     expect(lastCall.height).toBeGreaterThanOrEqual(2);
 
