@@ -103,7 +103,7 @@ export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
     // 行高（データがある行のみ）
     const rows: { row: number; height: number }[] = [];
     ws.eachRow({ includeEmpty: false }, (row) => {
-      rows.push({ row: row.number, height: row.height });
+      rows.push({ row: row.number, height: row.height ?? 15 });
     });
 
     // セルサンプル（最大20件）
