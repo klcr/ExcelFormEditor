@@ -1,7 +1,7 @@
 # 002-レイアウト崩れ: プレビュー表示の複合問題
 
 ## 状態
-未解決
+一部解決（症状A,B,C,D 修正済み。症状E は未対応）
 
 ## 発生日
 2026-03-06
@@ -97,9 +97,44 @@ PreviewCanvas > BoxSvg [PreviewCanvas.tsx:190]
 2. **Excelで開いた状態のスクリーンショット** — 期待レイアウトとの差分比較用
 3. **ブラウザコンソールログ** — パース時の警告・エラー確認
 
+## 修正履歴
+
+### 2026-03-06: 症状A,B,C,D 修正
+
+#### 調査結果
+
+ExcelJS の `cell.value` を テスト計算書.xlsx で調査した結果:
+
+- 全ての数式セルは `formula` プロパティを持つ（`sharedFormula` は別プロパティとしては出現しない）
+- 共有数式は `{ formula: "...", result: ..., ref: "U40", shareType: "shared" }` の形式
+- `result` は `number | string | { error: "#REF!" | "#DIV/0!" }` の3パターン
+- `result` が `undefined` のケースは テスト計算書.xlsx では確認されなかったが、安全のため空文字にフォールバック
+
+#### 修正内容
+
+1. **`formatCellValue()`** (`src/web/services/parseExcelFile.ts:66-79`)
+   - デバッグ表記 `=${formula} → ${result}` を廃止
+   - `result` が存在すれば `String(result)` を表示
+   - `result` がエラーオブジェクト `{ error: "..." }` の場合はエラー文字列を表示
+   - `result` が `null`/`undefined` の場合は空文字列
+
+2. **`BoxSvg` テキスト折り返し** (`src/web/components/preview/PreviewCanvas.tsx`)
+   - `wrapText` プロパティが `true` の場合、`<tspan>` 分割による複数行表示を実装
+   - CJK文字は全角幅、ASCII文字は半角幅で概算してボックス幅に収まるよう行分割
+   - 垂直配置（top/middle/bottom）を複数行テキストに対応
+
+3. **テスト追加** (`src/web/services/formatCellValue.test.ts`)
+   - テスト計算書.xlsx の全数式セルでデバッグ表記が出ないことを検証
+   - エラー結果のフォーマット検証
+
+#### 未対応
+
+- **症状E（ボックス位置・サイズのズレ）**: 実際のExcel表示との比較が必要
+
 ## 関連ファイル
 
 - `src/web/services/parseExcelFile.ts` — セル値変換（formatCellValue）
+- `src/web/services/formatCellValue.test.ts` — formatCellValue のテスト
 - `src/domain/excel/ExcelParser.ts` — Box生成（buildBoxes）
 - `src/domain/excel/ExcelTypes.ts` — RawCell型定義
 - `src/domain/box/BoxTypes.ts` — BoxDefinition型定義

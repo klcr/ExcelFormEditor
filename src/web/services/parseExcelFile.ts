@@ -70,7 +70,15 @@ function formatCellValue(value: ExcelJS.CellValue): { text: string; type: string
   if (typeof value === 'boolean') return { text: String(value), type: 'boolean' };
   if (value instanceof Date) return { text: value.toLocaleDateString('ja-JP'), type: 'date' };
   if (typeof value === 'object' && 'formula' in value) {
-    return { text: `=${value.formula} → ${value.result}`, type: 'formula' };
+    const formulaValue = value as { formula: string; result?: unknown };
+    const result = formulaValue.result;
+    if (result === null || result === undefined) {
+      return { text: '', type: 'formula' };
+    }
+    if (typeof result === 'object' && result !== null && 'error' in result) {
+      return { text: String((result as { error: string }).error), type: 'formula' };
+    }
+    return { text: String(result), type: 'formula' };
   }
   if (typeof value === 'object' && 'richText' in value) {
     const text = value.richText.map((rt) => rt.text).join('');
