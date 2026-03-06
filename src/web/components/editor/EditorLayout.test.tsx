@@ -61,3 +61,35 @@ describe('EditorLayout', () => {
     expect(screen.getByTestId('redo-button')).toBeInTheDocument();
   });
 });
+
+describe('EditorLayout mobile', () => {
+  it('mobile レイアウトでエディタを描画する', () => {
+    render(
+      <EditorLayout
+        boxes={[makeBox('box-1')]}
+        lines={[]}
+        paper={defaultPaper}
+        layoutMode="mobile"
+      />,
+    );
+    expect(screen.getByTestId('editor-layout')).toBeInTheDocument();
+    expect(screen.getByTestId('editor-canvas')).toBeInTheDocument();
+  });
+
+  it('mobile でボックス未選択時はプロパティボタン非表示', () => {
+    render(
+      <EditorLayout
+        boxes={[makeBox('box-1')]}
+        lines={[]}
+        paper={defaultPaper}
+        layoutMode="mobile"
+      />,
+    );
+    expect(screen.queryByTestId('open-property-sheet')).not.toBeInTheDocument();
+  });
+
+  it('mobile でツールバーが表示される', () => {
+    render(<EditorLayout boxes={[]} lines={[]} paper={defaultPaper} layoutMode="mobile" />);
+    expect(screen.getByTestId('editor-toolbar')).toBeInTheDocument();
+  });
+});
