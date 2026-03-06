@@ -6,7 +6,7 @@
 
 - **全体進捗**: 55%（Phase 1 完了、Phase 2 着手）
 - **アクティブフェーズ**: Phase 2 — 調整エディタ
-- **ブロッカー**: なし
+- **ブロッカー**: 1 件（Lint 違反・テスト失敗で check-all 未通過）
 - **最終変動日**: 2026-03-06
 
 ## フェーズ
@@ -21,19 +21,35 @@
 
 ## ブロッカー
 
-- （なし）
+- **check-all 未通過**: Biome lint の `noNonNullAssertion` 違反（ExcelParser.ts, parseExcelFile.ts 等）で check-all が lint 段階で停止する。テスト単体でも 3 件失敗（下記 事象 002）
 
 ## 既知の事象
 
 - **事象 001**: 結合セルの罫線が適切に表示されないケースがある（`docs/issues/reports/001-merged-cell-border-display.md`）— 根本原因修正済み（結合範囲外周セルの罫線データ補完収集を追加）。実ファイルでの最終検証待ち
+- **事象 002**: `formatCellValue.test.ts` の 3 テストがローカル Excel ファイル（`テスト計算書.xlsx`）に依存しており、ファイル不在時に ENOENT で失敗する。CI 環境では常時失敗する
 
 ## 次のアクション
 
-1. Phase 2: Step B — スナップガイド、ボックス分割・結合、Undo/Redo
-2. Phase 2: Step C — プロパティパネル（位置・サイズ・罫線・テキストスタイル）
-3. Phase 3: 変数バインディングの設計・着手
+1. **check-all 修正**: Lint 違反の解消 + テストの外部ファイル依存除去
+2. Phase 2: Step B — スナップガイド、ボックス分割・結合、Undo/Redo
+3. Phase 2: Step C — プロパティパネル（位置・サイズ・罫線・テキストスタイル）
+4. Phase 3: 変数バインディングの設計・着手
 
 ## diff
+
+```diff
+# 整合性検証による修正（2026-03-06）
+- 全 509 テスト パス（check-all 通過見込み）
++ 全 288 テスト（285 passed / 3 failed）— check-all 未通過
++ Lint: noNonNullAssertion 違反あり（ExcelParser.ts, parseExcelFile.ts 等）
++ テスト失敗: formatCellValue.test.ts — テスト計算書.xlsx 不在（3件）
++ 事象 002 追加: テストの外部ファイル依存
++ ブロッカー追加: check-all 未通過
++ 次のアクション先頭に check-all 修正を追加
+```
+
+<details>
+<summary>前回の diff（2026-03-06）</summary>
 
 ```diff
 - 全体進捗: 40%
@@ -47,11 +63,13 @@
 + BoxOperations.ts 実装（moveBox, resizeBox, splitBoxH/V, snapToGrid, findNearestSnapPoints）— 35テスト
 + useBoxEditor.ts フック実装（選択・移動・リサイズ状態管理）— 8テスト
 + BoxOverlay.tsx（選択UI）、DragHandle.tsx（ドラッグ移動）、ResizeHandle.tsx（リサイズハンドル）— 18テスト
-+ 全 509 テスト パス（check-all 通過見込み）
++ 全 288 テスト（285 passed / 3 failed）
 ```
 
+</details>
+
 <details>
-<summary>前回の diff（2026-03-06）</summary>
+<summary>前々回の diff（2026-03-06）</summary>
 
 ```diff
 - 全体進捗: 25%
