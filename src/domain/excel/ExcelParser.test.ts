@@ -108,13 +108,13 @@ describe('buildColumnPositions', () => {
     expect(positions[0]).toBe(0);
     // 8.43 文字 → (8.43 × 7 + 5) × 25.4 / 96 = 16.96... mm
     expect(positions[1]).toBeGreaterThan(0);
-    expect(positions[2]).toBeCloseTo(positions[1] * 2, 5);
+    expect(positions[2]).toBeCloseTo(positions[1]! * 2, 5);
   });
 
   it('幅 0 以下はデフォルト列幅を使用する', () => {
     const withZero = buildColumnPositions([0]);
     const withDefault = buildColumnPositions([8.43]);
-    expect(withZero[1]).toBeCloseTo(withDefault[1], 5);
+    expect(withZero[1]).toBeCloseTo(withDefault[1]!, 5);
   });
 });
 
@@ -136,7 +136,7 @@ describe('buildRowPositions', () => {
   it('高さ 0 以下はデフォルト行高を使用する', () => {
     const withZero = buildRowPositions([0]);
     const withDefault = buildRowPositions([15]);
-    expect(withZero[1]).toBeCloseTo(withDefault[1], 5);
+    expect(withZero[1]).toBeCloseTo(withDefault[1]!, 5);
   });
 });
 
@@ -229,11 +229,11 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0].content).toBe('テスト');
-    expect(result.boxes[0].rect.position.x).toBe(0);
-    expect(result.boxes[0].rect.position.y).toBe(0);
-    expect(result.boxes[0].rect.size.width).toBeGreaterThan(0);
-    expect(result.boxes[0].rect.size.height).toBeGreaterThan(0);
+    expect(result.boxes[0]!.content).toBe('テスト');
+    expect(result.boxes[0]!.rect.position.x).toBe(0);
+    expect(result.boxes[0]!.rect.position.y).toBe(0);
+    expect(result.boxes[0]!.rect.size.width).toBeGreaterThan(0);
+    expect(result.boxes[0]!.rect.size.height).toBeGreaterThan(0);
   });
 
   it('複数セルをそれぞれ Box に変換する', () => {
@@ -249,9 +249,9 @@ describe('parseSheet', () => {
 
     expect(result.boxes).toHaveLength(3);
     // B1 は A1 より右
-    expect(result.boxes[1].rect.position.x).toBeGreaterThan(result.boxes[0].rect.position.x);
+    expect(result.boxes[1]!.rect.position.x).toBeGreaterThan(result.boxes[0]!.rect.position.x);
     // A2 は A1 より下
-    expect(result.boxes[2].rect.position.y).toBeGreaterThan(result.boxes[0].rect.position.y);
+    expect(result.boxes[2]!.rect.position.y).toBeGreaterThan(result.boxes[0]!.rect.position.y);
   });
 
   it('結合セルの master のみ Box を生成する', () => {
@@ -275,18 +275,18 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0].content).toBe('結合');
+    expect(result.boxes[0]!.content).toBe('結合');
     // 結合セルは 2 列 × 2 行分のサイズ
-    const singleColWidth = result.boxes[0].rect.size.width;
-    const singleRowHeight = result.boxes[0].rect.size.height;
+    const singleColWidth = result.boxes[0]!.rect.size.width;
+    const singleRowHeight = result.boxes[0]!.rect.size.height;
     // 単一セルの 2 倍程度のサイズになることを確認
     const singleResult = parseSheet(
       createMinimalSheet({
         cells: [createCell({ address: 'A1', row: 1, col: 1, value: 'single' })],
       }),
     );
-    expect(singleColWidth).toBeCloseTo(singleResult.boxes[0].rect.size.width * 2, 1);
-    expect(singleRowHeight).toBeCloseTo(singleResult.boxes[0].rect.size.height * 2, 1);
+    expect(singleColWidth).toBeCloseTo(singleResult.boxes[0]!.rect.size.width * 2, 1);
+    expect(singleRowHeight).toBeCloseTo(singleResult.boxes[0]!.rect.size.height * 2, 1);
   });
 
   it('罫線スタイルを Box の border に反映する', () => {
@@ -309,10 +309,10 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0].border.top).toEqual({ style: 'thin', color: '000000' });
-    expect(result.boxes[0].border.bottom).toEqual({ style: 'medium', color: 'FF0000' });
-    expect(result.boxes[0].border.left).toBeUndefined();
-    expect(result.boxes[0].border.right).toBeUndefined();
+    expect(result.boxes[0]!.border.top).toEqual({ style: 'thin', color: '000000' });
+    expect(result.boxes[0]!.border.bottom).toEqual({ style: 'medium', color: 'FF0000' });
+    expect(result.boxes[0]!.border.left).toBeUndefined();
+    expect(result.boxes[0]!.border.right).toBeUndefined();
   });
 
   it('フォント情報を Box に反映する', () => {
@@ -332,10 +332,10 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0].font.name).toBe('MS Gothic');
-    expect(result.boxes[0].font.sizePt).toBe(14); // scale=100% なのでそのまま
-    expect(result.boxes[0].font.bold).toBe(true);
-    expect(result.boxes[0].font.color).toBe('333333');
+    expect(result.boxes[0]!.font.name).toBe('MS Gothic');
+    expect(result.boxes[0]!.font.sizePt).toBe(14); // scale=100% なのでそのまま
+    expect(result.boxes[0]!.font.bold).toBe(true);
+    expect(result.boxes[0]!.font.color).toBe('333333');
   });
 
   it('塗りつぶし情報を Box に反映する', () => {
@@ -353,7 +353,7 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0].fill?.color).toBe('FFFF00');
+    expect(result.boxes[0]!.fill?.color).toBe('FFFF00');
   });
 
   it('配置情報を Box に反映する', () => {
@@ -371,9 +371,9 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0].alignment.horizontal).toBe('center');
-    expect(result.boxes[0].alignment.vertical).toBe('middle');
-    expect(result.boxes[0].alignment.wrapText).toBe(true);
+    expect(result.boxes[0]!.alignment.horizontal).toBe('center');
+    expect(result.boxes[0]!.alignment.vertical).toBe('middle');
+    expect(result.boxes[0]!.alignment.wrapText).toBe(true);
   });
 
   it('scale 80% でボックスの座標が縮小される', () => {
@@ -390,12 +390,12 @@ describe('parseSheet', () => {
     const result80 = parseSheet(sheet80);
 
     // 80% のボックスは 100% より小さい
-    expect(result80.boxes[0].rect.position.x).toBeCloseTo(
-      result100.boxes[0].rect.position.x * 0.8,
+    expect(result80.boxes[0]!.rect.position.x).toBeCloseTo(
+      result100.boxes[0]!.rect.position.x * 0.8,
       2,
     );
-    expect(result80.boxes[0].rect.position.y).toBeCloseTo(
-      result100.boxes[0].rect.position.y * 0.8,
+    expect(result80.boxes[0]!.rect.position.y).toBeCloseTo(
+      result100.boxes[0]!.rect.position.y * 0.8,
       2,
     );
   });
@@ -424,7 +424,7 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0].border.top?.style).toBe('thin');
+    expect(result.boxes[0]!.border.top?.style).toBe('thin');
   });
 
   it('範囲外セルは無視される', () => {
@@ -440,6 +440,6 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0].content).toBe('範囲内');
+    expect(result.boxes[0]!.content).toBe('範囲内');
   });
 });

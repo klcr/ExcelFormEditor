@@ -101,7 +101,7 @@ function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
   for (const range of merges) {
     const match = range.match(/^([A-Z]+\d+):/);
     if (match) {
-      mergeByMaster.set(match[1], range);
+      mergeByMaster.set(match[1]!, range);
     }
   }
 
@@ -126,8 +126,8 @@ function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
 
       cells.push({
         address: cell.address,
-        row: cell.row,
-        col: cell.col,
+        row: Number(cell.row),
+        col: Number(cell.col),
         value: text,
         style: {
           font: cell.font
