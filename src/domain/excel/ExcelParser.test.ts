@@ -111,13 +111,13 @@ describe('buildColumnPositions', () => {
     expect(positions[0]).toBe(0);
     // 8.43 文字 → (8.43 × 7 + 5) × 25.4 / 96 = 16.96... mm
     expect(positions[1]).toBeGreaterThan(0);
-    expect(positions[2]).toBeCloseTo(positions[1]! * 2, 5);
+    expect(positions[2]).toBeCloseTo((positions[1] ?? 0) * 2, 5);
   });
 
   it('幅 0 以下はデフォルト列幅を使用する', () => {
     const withZero = buildColumnPositions([0]);
     const withDefault = buildColumnPositions([8.43]);
-    expect(withZero[1]).toBeCloseTo(withDefault[1]!, 5);
+    expect(withZero[1]).toBeCloseTo(withDefault[1] ?? 0, 5);
   });
 });
 
@@ -139,7 +139,7 @@ describe('buildRowPositions', () => {
   it('高さ 0 以下はデフォルト行高を使用する', () => {
     const withZero = buildRowPositions([0]);
     const withDefault = buildRowPositions([15]);
-    expect(withZero[1]).toBeCloseTo(withDefault[1]!, 5);
+    expect(withZero[1]).toBeCloseTo(withDefault[1] ?? 0, 5);
   });
 });
 
@@ -315,11 +315,11 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0]!.content).toBe('テスト');
-    expect(result.boxes[0]!.rect.position.x).toBe(0);
-    expect(result.boxes[0]!.rect.position.y).toBe(0);
-    expect(result.boxes[0]!.rect.size.width).toBeGreaterThan(0);
-    expect(result.boxes[0]!.rect.size.height).toBeGreaterThan(0);
+    expect(result.boxes[0]?.content).toBe('テスト');
+    expect(result.boxes[0]?.rect.position.x).toBe(0);
+    expect(result.boxes[0]?.rect.position.y).toBe(0);
+    expect(result.boxes[0]?.rect.size.width).toBeGreaterThan(0);
+    expect(result.boxes[0]?.rect.size.height).toBeGreaterThan(0);
   });
 
   it('複数セルをそれぞれ Box に変換する', () => {
@@ -334,10 +334,11 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes).toHaveLength(3);
+    const [box0, box1, box2] = result.boxes;
     // B1 は A1 より右
-    expect(result.boxes[1]!.rect.position.x).toBeGreaterThan(result.boxes[0]!.rect.position.x);
+    expect(box1?.rect.position.x).toBeGreaterThan(box0?.rect.position.x ?? 0);
     // A2 は A1 より下
-    expect(result.boxes[2]!.rect.position.y).toBeGreaterThan(result.boxes[0]!.rect.position.y);
+    expect(box2?.rect.position.y).toBeGreaterThan(box0?.rect.position.y ?? 0);
   });
 
   it('結合セルの master のみ Box を生成する', () => {
@@ -361,18 +362,20 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0]!.content).toBe('結合');
+    const mergedBox = result.boxes[0];
+    expect(mergedBox?.content).toBe('結合');
     // 結合セルは 2 列 × 2 行分のサイズ
-    const singleColWidth = result.boxes[0]!.rect.size.width;
-    const singleRowHeight = result.boxes[0]!.rect.size.height;
+    const singleColWidth = mergedBox?.rect.size.width ?? 0;
+    const singleRowHeight = mergedBox?.rect.size.height ?? 0;
     // 単一セルの 2 倍程度のサイズになることを確認
     const singleResult = parseSheet(
       createMinimalSheet({
         cells: [createCell({ address: 'A1', row: 1, col: 1, value: 'single' })],
       }),
     );
-    expect(singleColWidth).toBeCloseTo(singleResult.boxes[0]!.rect.size.width * 2, 1);
-    expect(singleRowHeight).toBeCloseTo(singleResult.boxes[0]!.rect.size.height * 2, 1);
+    const singleBox = singleResult.boxes[0];
+    expect(singleColWidth).toBeCloseTo((singleBox?.rect.size.width ?? 0) * 2, 1);
+    expect(singleRowHeight).toBeCloseTo((singleBox?.rect.size.height ?? 0) * 2, 1);
   });
 
   it('罫線付きセルから lines を生成する', () => {
@@ -430,10 +433,10 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0]!.border.top).toEqual({ style: 'thin', color: '000000' });
-    expect(result.boxes[0]!.border.bottom).toEqual({ style: 'medium', color: 'FF0000' });
-    expect(result.boxes[0]!.border.left).toBeUndefined();
-    expect(result.boxes[0]!.border.right).toBeUndefined();
+    expect(result.boxes[0]?.border.top).toEqual({ style: 'thin', color: '000000' });
+    expect(result.boxes[0]?.border.bottom).toEqual({ style: 'medium', color: 'FF0000' });
+    expect(result.boxes[0]?.border.left).toBeUndefined();
+    expect(result.boxes[0]?.border.right).toBeUndefined();
   });
 
   it('結合セルの罫線を外周セルから収集する', () => {
@@ -484,10 +487,10 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0]!.border.top).toEqual({ style: 'thin', color: '000000' });
-    expect(result.boxes[0]!.border.left).toEqual({ style: 'thin', color: '000000' });
-    expect(result.boxes[0]!.border.right).toEqual({ style: 'medium', color: 'FF0000' });
-    expect(result.boxes[0]!.border.bottom).toEqual({ style: 'thick', color: '0000FF' });
+    expect(result.boxes[0]?.border.top).toEqual({ style: 'thin', color: '000000' });
+    expect(result.boxes[0]?.border.left).toEqual({ style: 'thin', color: '000000' });
+    expect(result.boxes[0]?.border.right).toEqual({ style: 'medium', color: 'FF0000' });
+    expect(result.boxes[0]?.border.bottom).toEqual({ style: 'thick', color: '0000FF' });
   });
 
   it('フォント情報を Box に反映する', () => {
@@ -507,10 +510,10 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0]!.font.name).toBe('MS Gothic');
-    expect(result.boxes[0]!.font.sizePt).toBe(14); // scale=100% なのでそのまま
-    expect(result.boxes[0]!.font.bold).toBe(true);
-    expect(result.boxes[0]!.font.color).toBe('333333');
+    expect(result.boxes[0]?.font.name).toBe('MS Gothic');
+    expect(result.boxes[0]?.font.sizePt).toBe(14); // scale=100% なのでそのまま
+    expect(result.boxes[0]?.font.bold).toBe(true);
+    expect(result.boxes[0]?.font.color).toBe('333333');
   });
 
   it('塗りつぶし情報を Box に反映する', () => {
@@ -528,7 +531,7 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0]!.fill?.color).toBe('FFFF00');
+    expect(result.boxes[0]?.fill?.color).toBe('FFFF00');
   });
 
   it('配置情報を Box に反映する', () => {
@@ -546,9 +549,9 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0]!.alignment.horizontal).toBe('center');
-    expect(result.boxes[0]!.alignment.vertical).toBe('middle');
-    expect(result.boxes[0]!.alignment.wrapText).toBe(true);
+    expect(result.boxes[0]?.alignment.horizontal).toBe('center');
+    expect(result.boxes[0]?.alignment.vertical).toBe('middle');
+    expect(result.boxes[0]?.alignment.wrapText).toBe(true);
   });
 
   it('scale 80% でボックスの座標が縮小される', () => {
@@ -565,14 +568,9 @@ describe('parseSheet', () => {
     const result80 = parseSheet(sheet80);
 
     // 80% のボックスは 100% より小さい
-    expect(result80.boxes[0]!.rect.position.x).toBeCloseTo(
-      result100.boxes[0]!.rect.position.x * 0.8,
-      2,
-    );
-    expect(result80.boxes[0]!.rect.position.y).toBeCloseTo(
-      result100.boxes[0]!.rect.position.y * 0.8,
-      2,
-    );
+    const pos100 = result100.boxes[0]?.rect.position;
+    expect(result80.boxes[0]?.rect.position.x).toBeCloseTo((pos100?.x ?? 0) * 0.8, 2);
+    expect(result80.boxes[0]?.rect.position.y).toBeCloseTo((pos100?.y ?? 0) * 0.8, 2);
   });
 
   it('margins が null の場合はデフォルト余白を使用する', () => {
@@ -599,7 +597,7 @@ describe('parseSheet', () => {
       }),
     );
 
-    expect(result.boxes[0]!.border.top?.style).toBe('thin');
+    expect(result.boxes[0]?.border.top?.style).toBe('thin');
   });
 
   it('範囲外セルは無視される', () => {
@@ -615,7 +613,7 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0]!.content).toBe('範囲内');
+    expect(result.boxes[0]?.content).toBe('範囲内');
   });
 });
 
@@ -720,8 +718,8 @@ describe('applyPrintArea', () => {
 
     const result = applyPrintArea(sheet);
     expect(result.cells).toHaveLength(2);
-    expect(result.cells[0]!.value).toBe('範囲内1');
-    expect(result.cells[1]!.value).toBe('範囲内2');
+    expect(result.cells[0]?.value).toBe('範囲内1');
+    expect(result.cells[1]?.value).toBe('範囲内2');
   });
 
   it('セルの row/col を印刷領域起点にリマップする', () => {
@@ -738,13 +736,13 @@ describe('applyPrintArea', () => {
 
     const result = applyPrintArea(sheet);
     // B2 → row:1, col:1（リマップ後）
-    expect(result.cells[0]!.row).toBe(1);
-    expect(result.cells[0]!.col).toBe(1);
-    expect(result.cells[0]!.address).toBe('A1');
+    expect(result.cells[0]?.row).toBe(1);
+    expect(result.cells[0]?.col).toBe(1);
+    expect(result.cells[0]?.address).toBe('A1');
     // C3 → row:2, col:2（リマップ後）
-    expect(result.cells[1]!.row).toBe(2);
-    expect(result.cells[1]!.col).toBe(2);
-    expect(result.cells[1]!.address).toBe('B2');
+    expect(result.cells[1]?.row).toBe(2);
+    expect(result.cells[1]?.col).toBe(2);
+    expect(result.cells[1]?.address).toBe('B2');
   });
 
   it('結合範囲を印刷領域内にクリップ・リマップする', () => {
@@ -783,8 +781,8 @@ describe('parseSheet with printArea', () => {
     );
 
     expect(result.boxes).toHaveLength(2);
-    expect(result.boxes[0]!.content).toBe('領域内');
-    expect(result.boxes[1]!.content).toBe('領域内2');
+    expect(result.boxes[0]?.content).toBe('領域内');
+    expect(result.boxes[1]?.content).toBe('領域内2');
   });
 
   it('printArea の先頭セルが原点(0,0)にマップされる', () => {
@@ -799,8 +797,8 @@ describe('parseSheet with printArea', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0]!.rect.position.x).toBe(0);
-    expect(result.boxes[0]!.rect.position.y).toBe(0);
+    expect(result.boxes[0]?.rect.position.x).toBe(0);
+    expect(result.boxes[0]?.rect.position.y).toBe(0);
   });
 
   it('printArea 内の結合セルが正しく変換される', () => {
@@ -827,9 +825,9 @@ describe('parseSheet with printArea', () => {
     );
 
     expect(result.boxes).toHaveLength(1);
-    expect(result.boxes[0]!.content).toBe('結合');
+    expect(result.boxes[0]?.content).toBe('結合');
     // 結合セルは 2列×2行分のサイズ
-    expect(result.boxes[0]!.rect.position.x).toBe(0);
-    expect(result.boxes[0]!.rect.position.y).toBe(0);
+    expect(result.boxes[0]?.rect.position.x).toBe(0);
+    expect(result.boxes[0]?.rect.position.y).toBe(0);
   });
 });

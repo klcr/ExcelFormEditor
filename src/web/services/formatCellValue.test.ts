@@ -2,12 +2,11 @@
  * formatCellValue のテスト
  *
  * formatCellValue は parseExcelFile.ts 内のプライベート関数のため、
- * 実際の Excel ファイルを通して動作を確認する。
+ * プログラムで生成した Excel フィクスチャを通して動作を確認する。
  */
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
+import { createEstimateWorkbook } from './__fixtures__/createEstimateWorkbook';
 
 /** parseExcelFile.ts 内の formatCellValue と同等のロジック */
 function formatCellValue(value: ExcelJS.CellValue): { text: string; type: string } {
@@ -60,8 +59,7 @@ function formatCellValue(value: ExcelJS.CellValue): { text: string; type: string
 
 describe('formatCellValue — セル値変換', () => {
   it('数式セルの result 値が正しく表示される', async () => {
-    const filePath = path.resolve(__dirname, '../../../テスト計算書.xlsx');
-    const buffer = fs.readFileSync(filePath);
+    const buffer = await createEstimateWorkbook();
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
@@ -92,13 +90,12 @@ describe('formatCellValue — セル値変換', () => {
     const errorResults = formulaResults.filter((c) => c.text.startsWith('#'));
     expect(errorResults.length).toBeGreaterThan(0);
     for (const cell of errorResults) {
-      expect(cell.text).toMatch(/^#[A-Z0-9/!]+$/);
+      expect(cell.text).toMatch(/^#[A-Z0-9/!?]+$/);
     }
   });
 
   it('全セルで [object Object] や不正な表示が出ない', async () => {
-    const filePath = path.resolve(__dirname, '../../../テスト計算書.xlsx');
-    const buffer = fs.readFileSync(filePath);
+    const buffer = await createEstimateWorkbook();
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
@@ -115,7 +112,7 @@ describe('formatCellValue — セル値変換', () => {
           expect(text).not.toMatch(/^=.*→/);
           // "undefined" がそのまま表示されないこと
           expect(text).not.toContain('undefined');
-          // type が 'object' にならないこと（全てのオブジェクト型が適切にハンドリングされる）
+          // type が 'unknown' にならないこと
           expect(type, `${ws.name}!${cell.address} の型が未知: ${text}`).not.toBe('unknown');
         });
       });
@@ -123,13 +120,11 @@ describe('formatCellValue — セル値変換', () => {
   });
 
   it('sharedFormula 型のセルが正しく処理される', async () => {
-    const filePath = path.resolve(__dirname, '../../../テスト計算書.xlsx');
-    const buffer = fs.readFileSync(filePath);
+    const buffer = await createEstimateWorkbook();
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
 
-    // "長さ" シートに sharedFormula 型セルが存在する
     const sharedFormulaCells: Array<{
       address: string;
       text: string;
