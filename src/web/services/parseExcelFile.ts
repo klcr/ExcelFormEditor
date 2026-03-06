@@ -1,6 +1,8 @@
+import type { ParsedSheet, RawCell, RawSheetData } from '@domain/excel';
+import { parseSheet } from '@domain/excel';
 import ExcelJS from 'exceljs';
 
-/** シートごとのパース結果 */
+/** シートごとのデバッグ用パース結果 */
 export type SheetParseResult = {
   readonly name: string;
   readonly pageSetup: {
@@ -38,11 +40,17 @@ export type CellSample = {
   readonly hasFill: boolean;
 };
 
-/** ファイル全体のパース結果 */
+/** デバッグ用パース結果 */
 export type ExcelParseResult = {
   readonly fileName: string;
   readonly sheetCount: number;
   readonly sheets: readonly SheetParseResult[];
+};
+
+/** ドメイン変換込みの完全パース結果 */
+export type FullParseResult = {
+  readonly debug: ExcelParseResult;
+  readonly parsed: readonly ParsedSheet[];
 };
 
 const MAX_SAMPLE_CELLS = 20;
@@ -71,96 +79,221 @@ function formatCellValue(value: ExcelJS.CellValue): { text: string; type: string
   return { text: JSON.stringify(value), type: 'object' };
 }
 
-/** File オブジェクトを ArrayBuffer として読み込む */
-function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
-  return file.arrayBuffer();
+/** ARGB 文字列から先頭の 'FF' を除去して 6 桁 hex にする */
+function argbToHex(argb?: string): string | undefined {
+  if (!argb) return undefined;
+  return argb.length === 8 ? argb.slice(2) : argb;
 }
 
-/** .xlsx ファイルをパースしてデバッグ用の構造化データを返す */
-export async function parseExcelFile(file: File): Promise<ExcelParseResult> {
-  const buffer = await readFileAsArrayBuffer(file);
+/** ExcelJS の Fill から背景色を抽出する */
+function extractFillColor(fill: ExcelJS.Fill | undefined | null): string | undefined {
+  if (!fill || fill.type !== 'pattern') return undefined;
+  const patternFill = fill as ExcelJS.FillPattern;
+  return argbToHex(patternFill.fgColor?.argb);
+}
 
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+/** ExcelJS のワークシートを RawSheetData に変換する */
+function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
+  const margins = ws.pageSetup.margins;
+  const merges: string[] = ws.model.merges ?? [];
 
-  const sheets: SheetParseResult[] = [];
-
-  workbook.eachSheet((ws) => {
-    const margins = ws.pageSetup.margins;
-
-    // 結合セル情報
-    const merges = ws.model.merges ?? [];
-
-    // 列幅（データがある列のみ）
-    const columns: { col: number; width: number | undefined }[] = [];
-    for (let c = 1; c <= (ws.columnCount || 0); c++) {
-      const col = ws.getColumn(c);
-      if (col.width !== undefined) {
-        columns.push({ col: c, width: col.width });
-      }
+  const mergeByMaster = new Map<string, string>();
+  for (const range of merges) {
+    const match = range.match(/^([A-Z]+\d+):/);
+    if (match) {
+      mergeByMaster.set(match[1], range);
     }
+  }
 
-    // 行高（データがある行のみ）
-    const rows: { row: number; height: number }[] = [];
-    ws.eachRow({ includeEmpty: false }, (row) => {
-      rows.push({ row: row.number, height: row.height ?? 15 });
-    });
+  const colCount = ws.columnCount || 0;
+  const columnWidths: number[] = [];
+  for (let c = 1; c <= colCount; c++) {
+    columnWidths.push(ws.getColumn(c).width ?? 8.43);
+  }
 
-    // セルサンプル（最大20件）
-    const sampleCells: CellSample[] = [];
-    let cellCount = 0;
+  const rowCount = ws.rowCount || 0;
+  const rowHeights: number[] = [];
+  for (let r = 1; r <= rowCount; r++) {
+    const row = ws.getRow(r);
+    rowHeights.push(row.height ?? 15);
+  }
 
-    ws.eachRow({ includeEmpty: false }, (row) => {
-      row.eachCell({ includeEmpty: false }, (cell) => {
-        cellCount++;
-        if (sampleCells.length < MAX_SAMPLE_CELLS) {
-          const { text, type } = formatCellValue(cell.value);
-          sampleCells.push({
-            address: cell.address,
-            value: text,
-            type,
-            isMerged: cell.isMerged,
-            font: cell.font?.name,
-            hasBorder: cell.border !== undefined && cell.border !== null,
-            hasFill: cell.fill !== undefined && cell.fill !== null,
-          });
-        }
+  const cells: RawCell[] = [];
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      const { text } = formatCellValue(cell.value);
+      const borderRaw = cell.border;
+
+      cells.push({
+        address: cell.address,
+        row: cell.row,
+        col: cell.col,
+        value: text,
+        style: {
+          font: cell.font
+            ? {
+                name: cell.font.name,
+                size: cell.font.size,
+                bold: cell.font.bold,
+                italic: cell.font.italic,
+                color: argbToHex(cell.font.color?.argb),
+              }
+            : undefined,
+          border: borderRaw
+            ? {
+                top: borderRaw.top
+                  ? { style: borderRaw.top.style, color: argbToHex(borderRaw.top.color?.argb) }
+                  : undefined,
+                bottom: borderRaw.bottom
+                  ? {
+                      style: borderRaw.bottom.style,
+                      color: argbToHex(borderRaw.bottom.color?.argb),
+                    }
+                  : undefined,
+                left: borderRaw.left
+                  ? { style: borderRaw.left.style, color: argbToHex(borderRaw.left.color?.argb) }
+                  : undefined,
+                right: borderRaw.right
+                  ? { style: borderRaw.right.style, color: argbToHex(borderRaw.right.color?.argb) }
+                  : undefined,
+              }
+            : undefined,
+          fill: extractFillColor(cell.fill)
+            ? { color: extractFillColor(cell.fill) as string }
+            : undefined,
+          alignment: cell.alignment
+            ? {
+                horizontal: cell.alignment.horizontal,
+                vertical: cell.alignment.vertical,
+                wrapText: cell.alignment.wrapText,
+              }
+            : undefined,
+        },
+        isMerged: cell.isMerged,
+        mergeRange: mergeByMaster.get(cell.address),
       });
-    });
-
-    sheets.push({
-      name: ws.name,
-      pageSetup: {
-        paperSize: ws.pageSetup.paperSize,
-        orientation: ws.pageSetup.orientation,
-        scale: ws.pageSetup.scale,
-        fitToPage: ws.pageSetup.fitToPage,
-        fitToWidth: ws.pageSetup.fitToWidth,
-        fitToHeight: ws.pageSetup.fitToHeight,
-        printArea: ws.pageSetup.printArea,
-      },
-      margins: margins
-        ? {
-            top: margins.top,
-            bottom: margins.bottom,
-            left: margins.left,
-            right: margins.right,
-            header: margins.header,
-            footer: margins.footer,
-          }
-        : null,
-      merges,
-      columns,
-      rows,
-      cellCount,
-      sampleCells,
     });
   });
 
   return {
-    fileName: file.name,
-    sheetCount: sheets.length,
-    sheets,
+    name: ws.name,
+    pageSetup: {
+      paperSize: ws.pageSetup.paperSize,
+      orientation: ws.pageSetup.orientation,
+      scale: ws.pageSetup.scale,
+      fitToPage: ws.pageSetup.fitToPage,
+      fitToWidth: ws.pageSetup.fitToWidth,
+      fitToHeight: ws.pageSetup.fitToHeight,
+      printArea: ws.pageSetup.printArea,
+    },
+    margins: margins
+      ? {
+          top: margins.top,
+          bottom: margins.bottom,
+          left: margins.left,
+          right: margins.right,
+          header: margins.header,
+          footer: margins.footer,
+        }
+      : null,
+    columnWidths,
+    rowHeights,
+    cells,
+    merges,
+  };
+}
+
+/** デバッグ用のシート情報を抽出する */
+function worksheetToDebugResult(ws: ExcelJS.Worksheet): SheetParseResult {
+  const margins = ws.pageSetup.margins;
+  const merges: string[] = ws.model.merges ?? [];
+
+  const columns: { col: number; width: number | undefined }[] = [];
+  for (let c = 1; c <= (ws.columnCount || 0); c++) {
+    const col = ws.getColumn(c);
+    if (col.width !== undefined) {
+      columns.push({ col: c, width: col.width });
+    }
+  }
+
+  const rows: { row: number; height: number }[] = [];
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    rows.push({ row: row.number, height: row.height ?? 15 });
+  });
+
+  const sampleCells: CellSample[] = [];
+  let cellCount = 0;
+
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      cellCount++;
+      if (sampleCells.length < MAX_SAMPLE_CELLS) {
+        const { text, type } = formatCellValue(cell.value);
+        sampleCells.push({
+          address: cell.address,
+          value: text,
+          type,
+          isMerged: cell.isMerged,
+          font: cell.font?.name,
+          hasBorder: cell.border !== undefined && cell.border !== null,
+          hasFill: cell.fill !== undefined && cell.fill !== null,
+        });
+      }
+    });
+  });
+
+  return {
+    name: ws.name,
+    pageSetup: {
+      paperSize: ws.pageSetup.paperSize,
+      orientation: ws.pageSetup.orientation,
+      scale: ws.pageSetup.scale,
+      fitToPage: ws.pageSetup.fitToPage,
+      fitToWidth: ws.pageSetup.fitToWidth,
+      fitToHeight: ws.pageSetup.fitToHeight,
+      printArea: ws.pageSetup.printArea,
+    },
+    margins: margins
+      ? {
+          top: margins.top,
+          bottom: margins.bottom,
+          left: margins.left,
+          right: margins.right,
+          header: margins.header,
+          footer: margins.footer,
+        }
+      : null,
+    merges,
+    columns,
+    rows,
+    cellCount,
+    sampleCells,
+  };
+}
+
+/** .xlsx ファイルをパースしてドメイン変換結果とデバッグ情報を返す */
+export async function parseExcelFile(file: File): Promise<FullParseResult> {
+  const buffer = await file.arrayBuffer();
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+
+  const debugSheets: SheetParseResult[] = [];
+  const parsedSheets: ParsedSheet[] = [];
+
+  workbook.eachSheet((ws) => {
+    debugSheets.push(worksheetToDebugResult(ws));
+
+    const rawData = worksheetToRawSheetData(ws);
+    parsedSheets.push(parseSheet(rawData));
+  });
+
+  return {
+    debug: {
+      fileName: file.name,
+      sheetCount: debugSheets.length,
+      sheets: debugSheets,
+    },
+    parsed: parsedSheets,
   };
 }
 

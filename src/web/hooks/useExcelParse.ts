@@ -1,11 +1,11 @@
-import type { ExcelParseResult } from '@web/services/parseExcelFile';
+import type { FullParseResult } from '@web/services/parseExcelFile';
 import { parseExcelFile } from '@web/services/parseExcelFile';
 import { useCallback, useEffect, useState } from 'react';
 
 type ParseState =
   | { readonly status: 'idle' }
   | { readonly status: 'parsing' }
-  | { readonly status: 'success'; readonly result: ExcelParseResult }
+  | { readonly status: 'success'; readonly result: FullParseResult }
   | { readonly status: 'error'; readonly error: string };
 
 type UseExcelParseReturn = {
