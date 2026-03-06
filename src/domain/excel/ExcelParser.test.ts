@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { collectMergeBorder } from './BorderConverter';
 import {
   applyPrintArea,
   buildColumnPositions,
@@ -165,6 +166,89 @@ describe('buildMergeMap', () => {
   });
 });
 
+// --- collectMergeBorder テスト ---
+
+describe('collectMergeBorder', () => {
+  function makeCellMap(cells: RawCell[]): ReadonlyMap<string, RawCell> {
+    const map = new Map<string, RawCell>();
+    for (const cell of cells) {
+      map.set(cell.address, cell);
+    }
+    return map;
+  }
+
+  const merge = { startCol: 1, startRow: 1, endCol: 3, endRow: 2 }; // A1:C2
+
+  it('外周セルから各辺の罫線を収集する', () => {
+    const cellMap = makeCellMap([
+      // top: A1 に top 罫線
+      {
+        address: 'A1',
+        row: 1,
+        col: 1,
+        value: '',
+        style: { border: { top: { style: 'thin', color: '000000' } } },
+        isMerged: true,
+      },
+      // bottom: A2 に bottom 罫線
+      {
+        address: 'A2',
+        row: 2,
+        col: 1,
+        value: '',
+        style: { border: { bottom: { style: 'medium', color: 'FF0000' } } },
+        isMerged: true,
+      },
+      // right: C1 に right 罫線
+      {
+        address: 'C1',
+        row: 1,
+        col: 3,
+        value: '',
+        style: { border: { right: { style: 'thick', color: '0000FF' } } },
+        isMerged: true,
+      },
+    ]);
+
+    const result = collectMergeBorder(merge, cellMap);
+    expect(result).toBeDefined();
+    expect(result?.top).toEqual({ style: 'thin', color: '000000' });
+    expect(result?.bottom).toEqual({ style: 'medium', color: 'FF0000' });
+    expect(result?.left).toBeUndefined(); // A1 に left 罫線なし
+    expect(result?.right).toEqual({ style: 'thick', color: '0000FF' });
+  });
+
+  it('罫線が右端列の2行目にある場合でも収集する', () => {
+    const cellMap = makeCellMap([
+      // right: C2（最右列の2行目）に right 罫線
+      {
+        address: 'C2',
+        row: 2,
+        col: 3,
+        value: '',
+        style: { border: { right: { style: 'double', color: '00FF00' } } },
+        isMerged: true,
+      },
+    ]);
+
+    const result = collectMergeBorder(merge, cellMap);
+    expect(result?.right).toEqual({ style: 'double', color: '00FF00' });
+  });
+
+  it('全セルに罫線がない場合は undefined を返す', () => {
+    const cellMap = makeCellMap([
+      { address: 'A1', row: 1, col: 1, value: '', style: {}, isMerged: true },
+    ]);
+
+    expect(collectMergeBorder(merge, cellMap)).toBeUndefined();
+  });
+
+  it('cellMap にセルが存在しない場合も安全に動作する', () => {
+    const cellMap = makeCellMap([]);
+    expect(collectMergeBorder(merge, cellMap)).toBeUndefined();
+  });
+});
+
 // --- parseSheet 統合テスト ---
 
 function createMinimalSheet(overrides?: Partial<RawSheetData>): RawSheetData {
@@ -315,6 +399,60 @@ describe('parseSheet', () => {
     expect(result.boxes[0]!.border.bottom).toEqual({ style: 'medium', color: 'FF0000' });
     expect(result.boxes[0]!.border.left).toBeUndefined();
     expect(result.boxes[0]!.border.right).toBeUndefined();
+  });
+
+  it('結合セルの罫線を外周セルから収集する', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        merges: ['A1:B2'],
+        cells: [
+          // master: top + left 罫線あり
+          createCell({
+            address: 'A1',
+            row: 1,
+            col: 1,
+            value: '結合',
+            isMerged: true,
+            mergeRange: 'A1:B2',
+            style: {
+              border: {
+                top: { style: 'thin', color: '000000' },
+                left: { style: 'thin', color: '000000' },
+              },
+            },
+          }),
+          // 右上: right 罫線あり
+          createCell({
+            address: 'B1',
+            row: 1,
+            col: 2,
+            value: '',
+            isMerged: true,
+            style: {
+              border: { right: { style: 'medium', color: 'FF0000' } },
+            },
+          }),
+          // 左下: bottom 罫線あり
+          createCell({
+            address: 'A2',
+            row: 2,
+            col: 1,
+            value: '',
+            isMerged: true,
+            style: {
+              border: { bottom: { style: 'thick', color: '0000FF' } },
+            },
+          }),
+          createCell({ address: 'B2', row: 2, col: 2, value: '', isMerged: true }),
+        ],
+      }),
+    );
+
+    expect(result.boxes).toHaveLength(1);
+    expect(result.boxes[0]!.border.top).toEqual({ style: 'thin', color: '000000' });
+    expect(result.boxes[0]!.border.left).toEqual({ style: 'thin', color: '000000' });
+    expect(result.boxes[0]!.border.right).toEqual({ style: 'medium', color: 'FF0000' });
+    expect(result.boxes[0]!.border.bottom).toEqual({ style: 'thick', color: '0000FF' });
   });
 
   it('フォント情報を Box に反映する', () => {

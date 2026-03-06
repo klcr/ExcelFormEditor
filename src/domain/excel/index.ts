@@ -21,3 +21,4 @@ export {
   letterToColumnNumber,
   columnNumberToLetter,
 } from './ExcelParser';
+export { collectMergeBorder } from './BorderConverter';

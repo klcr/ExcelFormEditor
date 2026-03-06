@@ -1,12 +1,6 @@
 import type { BoxDefinition } from '@domain/box';
 import { createBox, generateBoxId, resetBoxIdCounter } from '@domain/box';
-import type {
-  BorderEdge,
-  BorderStyle,
-  BoxBorder,
-  HorizontalAlignment,
-  VerticalAlignment,
-} from '@domain/box';
+import type { HorizontalAlignment, VerticalAlignment } from '@domain/box';
 import type { LineDefinition } from '@domain/line';
 import {
   DEFAULT_MARGINS,
@@ -23,7 +17,8 @@ import {
   excelColumnWidthToMm,
   ptToMm,
 } from '@domain/paper/CoordinateConverter';
-import type { RawBorderEdge, RawCell, RawPageSetup, RawSheetData } from './ExcelTypes';
+import { buildCellMap, collectMergeBorder, convertBorder } from './BorderConverter';
+import type { RawCell, RawPageSetup, RawSheetData } from './ExcelTypes';
 
 /** シートのパース結果 */
 export type ParsedSheet = {
@@ -338,6 +333,7 @@ function buildBoxes(
 ): BoxDefinition[] {
   const boxes: BoxDefinition[] = [];
   const processedMergeSlaves = new Set<string>();
+  const cellMap = buildCellMap(cells);
 
   // マージされたスレーブセルのアドレスを収集
   for (const [, merge] of mergeMap) {
@@ -362,11 +358,13 @@ function buildBoxes(
     const rect = computeCellRect(cell, merge, columnPositions, rowPositions, effectiveScale);
     if (!rect) continue;
 
+    const border = merge ? collectMergeBorder(merge, cellMap) : convertBorder(cell.style.border);
+
     const box = createBox({
       id: generateBoxId(),
       rect,
       content: cell.value,
-      border: convertBorder(cell.style.border),
+      border,
       font: cell.style.font
         ? {
             name: cell.style.font.name,
@@ -434,43 +432,6 @@ function computeCellRect(
     position: { x, y },
     size: { width, height },
   };
-}
-
-/** 有効な BorderStyle 値のセット */
-const VALID_BORDER_STYLES = new Set<string>([
-  'thin',
-  'medium',
-  'thick',
-  'dotted',
-  'dashed',
-  'double',
-  'hair',
-]);
-
-/** RawBorderEdge → BorderEdge に変換する */
-function convertBorderEdge(raw?: RawBorderEdge): BorderEdge | undefined {
-  if (!raw || !raw.style) return undefined;
-  const style = VALID_BORDER_STYLES.has(raw.style) ? (raw.style as BorderStyle) : 'thin';
-  return {
-    style,
-    color: raw.color ?? '000000',
-  };
-}
-
-/** 生のボーダー情報 → BoxBorder に変換する */
-function convertBorder(rawBorder?: RawCell['style']['border']): BoxBorder | undefined {
-  if (!rawBorder) return undefined;
-  const border: BoxBorder = {
-    top: convertBorderEdge(rawBorder.top),
-    bottom: convertBorderEdge(rawBorder.bottom),
-    left: convertBorderEdge(rawBorder.left),
-    right: convertBorderEdge(rawBorder.right),
-  };
-  // 全辺が undefined なら border 自体を返さない
-  if (!border.top && !border.bottom && !border.left && !border.right) {
-    return undefined;
-  }
-  return border;
 }
 
 /** 水平配置の解決 */
