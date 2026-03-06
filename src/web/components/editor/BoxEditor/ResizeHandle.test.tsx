@@ -137,7 +137,8 @@ describe('ResizeHandle', () => {
 
     expect(onResize).toHaveBeenCalled();
     const calls = onResize.mock.calls;
-    const lastCall = calls[calls.length - 1][0];
+    const lastArgs = calls[calls.length - 1] as unknown[];
+    const lastCall = lastArgs[0] as { width: number; height: number };
     expect(lastCall.width).toBeGreaterThanOrEqual(2);
     expect(lastCall.height).toBeGreaterThanOrEqual(2);
 
