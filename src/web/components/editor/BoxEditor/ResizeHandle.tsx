@@ -1,6 +1,7 @@
 import type { BoxDefinition } from '@domain/box';
 import type { Position, Size } from '@domain/shared';
 import { useCallback, useRef } from 'react';
+import { findParentSvg, screenToSvgCoords } from '../../../utils/svgCoordinates';
 
 type ResizeHandleProps = {
   readonly box: BoxDefinition;
@@ -101,25 +102,6 @@ const HANDLE_CONFIGS: readonly HandleConfig[] = [
     }),
   },
 ];
-
-function screenToSvgCoords(svgElement: SVGSVGElement, clientX: number, clientY: number): Position {
-  const point = svgElement.createSVGPoint();
-  point.x = clientX;
-  point.y = clientY;
-  const ctm = svgElement.getScreenCTM();
-  if (!ctm) return { x: clientX, y: clientY };
-  const svgPoint = point.matrixTransform(ctm.inverse());
-  return { x: svgPoint.x, y: svgPoint.y };
-}
-
-function findParentSvg(element: Element): SVGSVGElement | null {
-  let current: Element | null = element;
-  while (current) {
-    if (current instanceof SVGSVGElement) return current;
-    current = current.parentElement;
-  }
-  return null;
-}
 
 export function ResizeHandle({ box, onResizeStart, onResize, onResizeEnd }: ResizeHandleProps) {
   const { x, y } = box.rect.position;

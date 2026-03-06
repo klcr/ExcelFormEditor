@@ -1,38 +1,18 @@
 import type { BoxDefinition } from '@domain/box';
 import type { Position } from '@domain/shared';
 import { useCallback, useRef } from 'react';
+import { findParentSvg, screenToSvgCoords } from '../../../utils/svgCoordinates';
 
 type DragHandleProps = {
   readonly box: BoxDefinition;
   readonly onDragStart: () => void;
   readonly onDrag: (delta: Position) => void;
   readonly onDragEnd: () => void;
+  /** ドラッグ中のdeltaをスナップ補正するコールバック（省略可） */
+  readonly snapDelta?: (box: BoxDefinition, rawDelta: Position) => Position;
 };
 
-/**
- * Converts screen (client) coordinates to SVG coordinates.
- * Requires the SVG element to have a viewBox set.
- */
-function screenToSvgCoords(svgElement: SVGSVGElement, clientX: number, clientY: number): Position {
-  const point = svgElement.createSVGPoint();
-  point.x = clientX;
-  point.y = clientY;
-  const ctm = svgElement.getScreenCTM();
-  if (!ctm) return { x: clientX, y: clientY };
-  const svgPoint = point.matrixTransform(ctm.inverse());
-  return { x: svgPoint.x, y: svgPoint.y };
-}
-
-function findParentSvg(element: Element): SVGSVGElement | null {
-  let current: Element | null = element;
-  while (current) {
-    if (current instanceof SVGSVGElement) return current;
-    current = current.parentElement;
-  }
-  return null;
-}
-
-export function DragHandle({ box, onDragStart, onDrag, onDragEnd }: DragHandleProps) {
+export function DragHandle({ box, onDragStart, onDrag, onDragEnd, snapDelta }: DragHandleProps) {
   const { x, y } = box.rect.position;
   const { width, height } = box.rect.size;
   const lastSvgPos = useRef<Position | null>(null);
@@ -56,7 +36,8 @@ export function DragHandle({ box, onDragStart, onDrag, onDragEnd }: DragHandlePr
           y: currentPos.y - lastSvgPos.current.y,
         };
         lastSvgPos.current = currentPos;
-        onDrag(delta);
+        const correctedDelta = snapDelta ? snapDelta(box, delta) : delta;
+        onDrag(correctedDelta);
       };
 
       const handleMouseUp = () => {
@@ -69,7 +50,7 @@ export function DragHandle({ box, onDragStart, onDrag, onDragEnd }: DragHandlePr
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [onDragStart, onDrag, onDragEnd],
+    [onDragStart, onDrag, onDragEnd, snapDelta, box],
   );
 
   return (
