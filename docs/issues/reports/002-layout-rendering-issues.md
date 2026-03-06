@@ -131,6 +131,28 @@ ExcelJS の `cell.value` を テスト計算書.xlsx で調査した結果:
 
 - **症状E（ボックス位置・サイズのズレ）**: 実際のExcel表示との比較が必要
 
+### 2026-03-06: 追加修正 — sharedFormula・Date・エラーセル対応
+
+#### 調査結果（Excel画像との比較による）
+
+- エディタはSheet 1 "様式電⑧-2電圧降下（分岐）" を表示。Excel画像はSheet 2 "電圧降下"
+- Sheet 3 "長さ" に `{ sharedFormula: "B10" }` 型のセルが存在（`formula` プロパティなし）→ `[object Object]` の原因
+- Sheet 2 の日付セル Z30 が `instanceof Date` をすり抜けている（jsdom環境の問題）
+- Sheet 1 の行高さが全て5.1pt（約1.8mm）で極小 → テキストが見えにくいのは正しい挙動
+
+#### 修正内容
+
+1. **`formatCellValue()` の全面改善**
+   - `sharedFormula` 型セル（`formula` プロパティなし）のハンドリング追加
+   - Date duck-typing（`getTime` メソッドチェック）で jsdom 環境対応
+   - エラーセル `{ error: "#REF!" }` の直接ハンドリング
+   - ハイパーリンクセル `{ text: "...", hyperlink: "..." }` のハンドリング
+   - フォールバックを `JSON.stringify` から `String()` に変更、型を `unknown` に
+2. **テスト強化**
+   - 全セルで `[object Object]` が出ないことを検証
+   - `sharedFormula` 型セルの専用テスト追加
+   - 型が `unknown` にならないことを検証
+
 ## 関連ファイル
 
 - `src/web/services/parseExcelFile.ts` — セル値変換（formatCellValue）
