@@ -185,10 +185,13 @@ function collectMergePerimeterCells(
     const match = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
     if (!match) continue;
 
-    const startCol = letterToColNum(match[1]!);
-    const startRow = Number(match[2]);
-    const endCol = letterToColNum(match[3]!);
-    const endRow = Number(match[4]);
+    const [, startColStr, startRowStr, endColStr, endRowStr] = match;
+    if (!startColStr || !startRowStr || !endColStr || !endRowStr) continue;
+
+    const startCol = letterToColNum(startColStr);
+    const startRow = Number(startRowStr);
+    const endCol = letterToColNum(endColStr);
+    const endRow = Number(endRowStr);
 
     // 外周セルのアドレスを列挙
     const perimeterAddresses = new Set<string>();
@@ -232,7 +235,10 @@ function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
   for (const range of merges) {
     const match = range.match(/^([A-Z]+\d+):/);
     if (match) {
-      mergeByMaster.set(match[1]!, range);
+      const masterAddr = match[1];
+      if (masterAddr) {
+        mergeByMaster.set(masterAddr, range);
+      }
     }
   }
 

@@ -298,11 +298,14 @@ export function parseCellRange(range: string): MergeInfo | null {
   const match = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
   if (!match) return null;
 
+  const [, startColStr, startRowStr, endColStr, endRowStr] = match;
+  if (!startColStr || !startRowStr || !endColStr || !endRowStr) return null;
+
   return {
-    startCol: letterToColumnNumber(match[1]!),
-    startRow: Number(match[2]),
-    endCol: letterToColumnNumber(match[3]!),
-    endRow: Number(match[4]),
+    startCol: letterToColumnNumber(startColStr),
+    startRow: Number(startRowStr),
+    endCol: letterToColumnNumber(endColStr),
+    endRow: Number(endRowStr),
   };
 }
 
@@ -421,16 +424,15 @@ function computeCellRect(
     return null;
   }
 
-  const x = applyScale(columnPositions[startCol - 1]!, effectiveScale);
-  const y = applyScale(rowPositions[startRow - 1]!, effectiveScale);
-  const width = applyScale(
-    columnPositions[endCol - 1]! - columnPositions[startCol - 1]!,
-    effectiveScale,
-  );
-  const height = applyScale(
-    rowPositions[endRow - 1]! - rowPositions[startRow - 1]!,
-    effectiveScale,
-  );
+  const colStart = columnPositions[startCol - 1] ?? 0;
+  const colEnd = columnPositions[endCol - 1] ?? 0;
+  const rowStart = rowPositions[startRow - 1] ?? 0;
+  const rowEnd = rowPositions[endRow - 1] ?? 0;
+
+  const x = applyScale(colStart, effectiveScale);
+  const y = applyScale(rowStart, effectiveScale);
+  const width = applyScale(colEnd - colStart, effectiveScale);
+  const height = applyScale(rowEnd - rowStart, effectiveScale);
 
   return {
     position: { x, y },

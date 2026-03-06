@@ -26,6 +26,7 @@
 ## 既知の事象
 
 - **事象 001**: 結合セルの罫線が適切に表示されないケースがある（`docs/issues/reports/001-merged-cell-border-display.md`）— 根本原因修正済み（結合範囲外周セルの罫線データ補完収集を追加）。実ファイルでの最終検証待ち
+- ~~**事象 002**: `formatCellValue.test.ts` の外部ファイル依存~~ — **解決済み**: テスト計算書.xlsx をプログラム生成のフィクスチャ（見積書）に置換
 
 ## 次のアクション
 
@@ -34,6 +35,37 @@
 3. Phase 3: 変数バインディングの設計・着手
 
 ## diff
+
+```diff
+# ブロッカー解消（2026-03-06）
+- ブロッカー: 1 件（Lint 違反・テスト失敗で check-all 未通過）
++ ブロッカー: なし
+- 全 288 テスト（285 passed / 3 failed）— check-all 未通過
++ 全 288 テスト パス — build + check-all 通過
++ noNonNullAssertion 違反 12 件を解消（?? 0 / 分割代入 / ガード節）
++ formatCellValue.test.ts: テスト計算書.xlsx 依存を除去
++ 見積書フィクスチャ（createEstimateWorkbook.ts）を追加
++ 事象 002 解決済み
+```
+
+<details>
+<summary>前回の diff（2026-03-06）</summary>
+
+```diff
+# 整合性検証による修正（2026-03-06）
+- 全 509 テスト パス（check-all 通過見込み）
++ 全 288 テスト（285 passed / 3 failed）— check-all 未通過
++ Lint: noNonNullAssertion 違反あり（ExcelParser.ts, parseExcelFile.ts 等）
++ テスト失敗: formatCellValue.test.ts — テスト計算書.xlsx 不在（3件）
++ 事象 002 追加: テストの外部ファイル依存
++ ブロッカー追加: check-all 未通過
++ 次のアクション先頭に check-all 修正を追加
+```
+
+</details>
+
+<details>
+<summary>前々回の diff（2026-03-06）</summary>
 
 ```diff
 - 全体進捗: 40%
@@ -47,24 +79,7 @@
 + BoxOperations.ts 実装（moveBox, resizeBox, splitBoxH/V, snapToGrid, findNearestSnapPoints）— 35テスト
 + useBoxEditor.ts フック実装（選択・移動・リサイズ状態管理）— 8テスト
 + BoxOverlay.tsx（選択UI）、DragHandle.tsx（ドラッグ移動）、ResizeHandle.tsx（リサイズハンドル）— 18テスト
-+ 全 509 テスト パス（check-all 通過見込み）
-```
-
-<details>
-<summary>前回の diff（2026-03-06）</summary>
-
-```diff
-- 全体進捗: 25%
-+ 全体進捗: 40%
-- Phase 1: active / 40%
-+ Phase 1: active / 90%
-+ 事象 001 修正: 結合セル外周スレーブの罫線データ補完収集（collectMergePerimeterCells）
-+ BorderConverter テスト追加（20件）
-+ LineExtractor 実装: ボックス罫線から線分を抽出・重複排除（extractLines）
-+ ExcelParser に Line 抽出を統合（lines: [] → extractLines(boxes)）
-+ PreviewCanvas に Line 描画追加（LineSvg コンポーネント）
-+ テキストクリッピング修正: clipPath="inset(0 0 0 0)" → SVG <clipPath> + <rect>
-+ 全 215 テスト パス（check-all 通過）
++ 全 288 テスト（285 passed / 3 failed）
 ```
 
 </details>
