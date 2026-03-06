@@ -26,7 +26,7 @@
 ## 既知の事象
 
 - **事象 001**: 結合セルの罫線が適切に表示されないケースがある（`docs/issues/reports/001-merged-cell-border-display.md`）— 根本原因修正済み（結合範囲外周セルの罫線データ補完収集を追加）。実ファイルでの最終検証待ち
-- ~~**事象 002**: `formatCellValue.test.ts` の外部ファイル依存~~ — **解決済み**: テスト計算書.xlsx をプログラム生成のフィクスチャ（見積書）に置換
+- **事象 002**: レイアウト崩れ: プレビュー表示の複合問題（`docs/issues/reports/002-layout-rendering-issues.md`）— 症状 A,B,C,D 修正済み。**症状 E（ボックス位置・サイズのズレ）は未対応**（実 Excel との比較が必要）
 
 ## 次のアクション
 
@@ -35,6 +35,16 @@
 3. Phase 3: 変数バインディングの設計・着手
 
 ## diff
+
+```diff
+# 整合性検証による修正（2026-03-06）
+- 事象 002: `formatCellValue.test.ts` の外部ファイル依存（解決済み）
++ 事象 002: レイアウト崩れ: プレビュー表示の複合問題（症状A,B,C,D修正済み、症状E未対応）
++ 事象 002 の記述を実際の issue レポート（002-layout-rendering-issues.md）と整合させた
+```
+
+<details>
+<summary>前回の diff（2026-03-06: ブロッカー解消）</summary>
 
 ```diff
 # ブロッカー解消（2026-03-06）
@@ -48,8 +58,10 @@
 + 事象 002 解決済み
 ```
 
+</details>
+
 <details>
-<summary>前回の diff（2026-03-06）</summary>
+<summary>前々回の diff（2026-03-06: 整合性検証）</summary>
 
 ```diff
 # 整合性検証による修正（2026-03-06）
@@ -65,7 +77,7 @@
 </details>
 
 <details>
-<summary>前々回の diff（2026-03-06）</summary>
+<summary>前々々回の diff（2026-03-06: Phase 1→2 進捗）</summary>
 
 ```diff
 - 全体進捗: 40%
