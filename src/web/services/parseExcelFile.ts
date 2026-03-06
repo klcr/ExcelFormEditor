@@ -92,6 +92,102 @@ function extractFillColor(fill: ExcelJS.Fill | undefined | null): string | undef
   return argbToHex(patternFill.fgColor?.argb);
 }
 
+/** ExcelJS の border を RawCell 用の border 構造に変換する */
+function extractBorderData(
+  borderRaw: ExcelJS.Borders | undefined | null,
+): RawCell['style']['border'] {
+  if (!borderRaw) return undefined;
+  return {
+    top: borderRaw.top
+      ? { style: borderRaw.top.style, color: argbToHex(borderRaw.top.color?.argb) }
+      : undefined,
+    bottom: borderRaw.bottom
+      ? { style: borderRaw.bottom.style, color: argbToHex(borderRaw.bottom.color?.argb) }
+      : undefined,
+    left: borderRaw.left
+      ? { style: borderRaw.left.style, color: argbToHex(borderRaw.left.color?.argb) }
+      : undefined,
+    right: borderRaw.right
+      ? { style: borderRaw.right.style, color: argbToHex(borderRaw.right.color?.argb) }
+      : undefined,
+  };
+}
+
+/** 列番号 → 列文字（1=A, 2=B, ..., 26=Z, 27=AA） */
+function colNumToLetter(col: number): string {
+  let result = '';
+  let n = col;
+  while (n > 0) {
+    n--;
+    result = String.fromCharCode(65 + (n % 26)) + result;
+    n = Math.floor(n / 26);
+  }
+  return result;
+}
+
+/** 列文字 → 列番号（A=1, B=2, ..., Z=26, AA=27） */
+function letterToColNum(letters: string): number {
+  let result = 0;
+  for (let i = 0; i < letters.length; i++) {
+    result = result * 26 + (letters.charCodeAt(i) - 64);
+  }
+  return result;
+}
+
+/**
+ * 結合範囲の外周セルから罫線データを補完収集する。
+ * eachCell({ includeEmpty: false }) でスキップされた空のスレーブセルが
+ * 罫線データを保持している場合があるため、外周のみを追加取得する。
+ */
+function collectMergePerimeterCells(
+  ws: ExcelJS.Worksheet,
+  merges: readonly string[],
+  collectedAddresses: Set<string>,
+): RawCell[] {
+  const extraCells: RawCell[] = [];
+
+  for (const range of merges) {
+    const match = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+    if (!match) continue;
+
+    const startCol = letterToColNum(match[1]!);
+    const startRow = Number(match[2]);
+    const endCol = letterToColNum(match[3]!);
+    const endRow = Number(match[4]);
+
+    // 外周セルのアドレスを列挙
+    const perimeterAddresses = new Set<string>();
+    for (let c = startCol; c <= endCol; c++) {
+      perimeterAddresses.add(colNumToLetter(c) + startRow);
+      perimeterAddresses.add(colNumToLetter(c) + endRow);
+    }
+    for (let r = startRow + 1; r < endRow; r++) {
+      perimeterAddresses.add(colNumToLetter(startCol) + r);
+      perimeterAddresses.add(colNumToLetter(endCol) + r);
+    }
+
+    for (const addr of perimeterAddresses) {
+      if (collectedAddresses.has(addr)) continue;
+
+      const cell = ws.getCell(addr);
+      const border = extractBorderData(cell.border);
+      if (!border) continue;
+
+      collectedAddresses.add(addr);
+      extraCells.push({
+        address: addr,
+        row: Number(cell.row),
+        col: Number(cell.col),
+        value: '',
+        style: { border },
+        isMerged: true,
+      });
+    }
+  }
+
+  return extraCells;
+}
+
 /** ExcelJS のワークシートを RawSheetData に変換する */
 function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
   const margins = ws.pageSetup.margins;
@@ -119,11 +215,13 @@ function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
   }
 
   const cells: RawCell[] = [];
+  const collectedAddresses = new Set<string>();
+
   ws.eachRow({ includeEmpty: false }, (row) => {
     row.eachCell({ includeEmpty: false }, (cell) => {
       const { text } = formatCellValue(cell.value);
-      const borderRaw = cell.border;
 
+      collectedAddresses.add(cell.address);
       cells.push({
         address: cell.address,
         row: Number(cell.row),
@@ -139,25 +237,7 @@ function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
                 color: argbToHex(cell.font.color?.argb),
               }
             : undefined,
-          border: borderRaw
-            ? {
-                top: borderRaw.top
-                  ? { style: borderRaw.top.style, color: argbToHex(borderRaw.top.color?.argb) }
-                  : undefined,
-                bottom: borderRaw.bottom
-                  ? {
-                      style: borderRaw.bottom.style,
-                      color: argbToHex(borderRaw.bottom.color?.argb),
-                    }
-                  : undefined,
-                left: borderRaw.left
-                  ? { style: borderRaw.left.style, color: argbToHex(borderRaw.left.color?.argb) }
-                  : undefined,
-                right: borderRaw.right
-                  ? { style: borderRaw.right.style, color: argbToHex(borderRaw.right.color?.argb) }
-                  : undefined,
-              }
-            : undefined,
+          border: extractBorderData(cell.border),
           fill: extractFillColor(cell.fill)
             ? { color: extractFillColor(cell.fill) as string }
             : undefined,
@@ -174,6 +254,10 @@ function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
       });
     });
   });
+
+  // 結合範囲の外周セルから罫線データを補完収集（事象 001 修正）
+  const perimeterCells = collectMergePerimeterCells(ws, merges, collectedAddresses);
+  cells.push(...perimeterCells);
 
   return {
     name: ws.name,

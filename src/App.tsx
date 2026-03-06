@@ -25,6 +25,7 @@ export function App() {
 
   const paper = firstSheet?.paper ?? defaultPaper;
   const boxes = firstSheet?.boxes ?? [];
+  const lines = firstSheet?.lines ?? [];
 
   return (
     <AppLayout
@@ -36,7 +37,7 @@ export function App() {
       }
       main={
         <>
-          <PreviewCanvas paper={paper} boxes={boxes} />
+          <PreviewCanvas paper={paper} boxes={boxes} lines={lines} />
           <DebugPanel parseState={parseState} />
         </>
       }

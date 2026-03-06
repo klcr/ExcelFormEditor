@@ -1,4 +1,5 @@
 import type { BoxDefinition } from '@domain/box';
+import type { LineDefinition } from '@domain/line';
 import { INCHES_TO_MM, type PaperDefinition, getPaperDimensions } from '@domain/paper';
 import { borderStyleToStrokeDasharray, borderStyleToStrokeWidth } from '@web/utils/svgHelpers';
 import styles from './PreviewCanvas.module.css';
@@ -6,9 +7,10 @@ import styles from './PreviewCanvas.module.css';
 type PreviewCanvasProps = {
   readonly paper: PaperDefinition | null;
   readonly boxes?: readonly BoxDefinition[];
+  readonly lines?: readonly LineDefinition[];
 };
 
-export function PreviewCanvas({ paper, boxes = [] }: PreviewCanvasProps) {
+export function PreviewCanvas({ paper, boxes = [], lines = [] }: PreviewCanvasProps) {
   if (!paper) {
     return (
       <div className={styles.container}>
@@ -61,6 +63,9 @@ export function PreviewCanvas({ paper, boxes = [] }: PreviewCanvasProps) {
           {boxes.map((box) => (
             <BoxSvg key={box.id} box={box} />
           ))}
+          {lines.map((line) => (
+            <LineSvg key={line.id} line={line} />
+          ))}
         </g>
         <text
           x={dimensions.width / 2}
@@ -81,8 +86,15 @@ function BoxSvg({ box }: { readonly box: BoxDefinition }) {
   const { width, height } = box.rect.size;
   const fontSize = Math.min(box.font.sizePt * 0.3528, height * 0.8);
 
+  const clipId = `clip-${box.id}`;
+
   return (
     <g>
+      <defs>
+        <clipPath id={clipId}>
+          <rect x={x} y={y} width={width} height={height} />
+        </clipPath>
+      </defs>
       {box.fill && <rect x={x} y={y} width={width} height={height} fill={`#${box.fill.color}`} />}
       <rect
         x={x}
@@ -173,11 +185,25 @@ function BoxSvg({ box }: { readonly box: BoxDefinition }) {
           fontWeight={box.font.bold ? 'bold' : 'normal'}
           fontStyle={box.font.italic ? 'italic' : 'normal'}
           fill={`#${box.font.color}`}
-          clipPath="inset(0 0 0 0)"
+          clipPath={`url(#${clipId})`}
         >
           {box.content}
         </text>
       )}
     </g>
+  );
+}
+
+function LineSvg({ line }: { readonly line: LineDefinition }) {
+  return (
+    <line
+      x1={line.start.x}
+      y1={line.start.y}
+      x2={line.end.x}
+      y2={line.end.y}
+      stroke={`#${line.color}`}
+      strokeWidth={borderStyleToStrokeWidth(line.style)}
+      strokeDasharray={borderStyleToStrokeDasharray(line.style)}
+    />
   );
 }
