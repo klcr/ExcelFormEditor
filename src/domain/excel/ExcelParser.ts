@@ -139,8 +139,10 @@ export function resolveScaling(pageSetup: RawPageSetup): ScalingConfig {
 export function buildColumnPositions(columnWidths: readonly number[]): readonly number[] {
   const positions: number[] = [0];
   for (let i = 0; i < columnWidths.length; i++) {
-    const width = columnWidths[i] > 0 ? columnWidths[i] : DEFAULT_COLUMN_WIDTH;
-    positions.push(positions[i] + excelColumnWidthToMm(width));
+    const raw = columnWidths[i] ?? DEFAULT_COLUMN_WIDTH;
+    const width = raw > 0 ? raw : DEFAULT_COLUMN_WIDTH;
+    const prev = positions[i] ?? 0;
+    positions.push(prev + excelColumnWidthToMm(width));
   }
   return positions;
 }
@@ -149,8 +151,10 @@ export function buildColumnPositions(columnWidths: readonly number[]): readonly 
 export function buildRowPositions(rowHeights: readonly number[]): readonly number[] {
   const positions: number[] = [0];
   for (let i = 0; i < rowHeights.length; i++) {
-    const height = rowHeights[i] > 0 ? rowHeights[i] : DEFAULT_ROW_HEIGHT;
-    positions.push(positions[i] + ptToMm(height));
+    const raw = rowHeights[i] ?? DEFAULT_ROW_HEIGHT;
+    const height = raw > 0 ? raw : DEFAULT_ROW_HEIGHT;
+    const prev = positions[i] ?? 0;
+    positions.push(prev + ptToMm(height));
   }
   return positions;
 }
@@ -194,9 +198,9 @@ export function parseCellRange(range: string): MergeInfo | null {
   if (!match) return null;
 
   return {
-    startCol: letterToColumnNumber(match[1]),
+    startCol: letterToColumnNumber(match[1]!),
     startRow: Number(match[2]),
-    endCol: letterToColumnNumber(match[3]),
+    endCol: letterToColumnNumber(match[3]!),
     endRow: Number(match[4]),
   };
 }
@@ -313,13 +317,16 @@ function computeCellRect(
     return null;
   }
 
-  const x = applyScale(columnPositions[startCol - 1], effectiveScale);
-  const y = applyScale(rowPositions[startRow - 1], effectiveScale);
+  const x = applyScale(columnPositions[startCol - 1]!, effectiveScale);
+  const y = applyScale(rowPositions[startRow - 1]!, effectiveScale);
   const width = applyScale(
-    columnPositions[endCol - 1] - columnPositions[startCol - 1],
+    columnPositions[endCol - 1]! - columnPositions[startCol - 1]!,
     effectiveScale,
   );
-  const height = applyScale(rowPositions[endRow - 1] - rowPositions[startRow - 1], effectiveScale);
+  const height = applyScale(
+    rowPositions[endRow - 1]! - rowPositions[startRow - 1]!,
+    effectiveScale,
+  );
 
   return {
     position: { x, y },
