@@ -375,6 +375,41 @@ describe('parseSheet', () => {
     expect(singleRowHeight).toBeCloseTo(singleResult.boxes[0]!.rect.size.height * 2, 1);
   });
 
+  it('罫線付きセルから lines を生成する', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        cells: [
+          createCell({
+            address: 'A1',
+            row: 1,
+            col: 1,
+            value: '',
+            style: {
+              border: {
+                top: { style: 'thin', color: '000000' },
+                bottom: { style: 'thin', color: '000000' },
+                left: { style: 'thin', color: '000000' },
+                right: { style: 'thin', color: '000000' },
+              },
+            },
+          }),
+        ],
+      }),
+    );
+
+    expect(result.lines.length).toBe(4);
+  });
+
+  it('罫線なしセルでは lines が空', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        cells: [createCell({ address: 'A1', row: 1, col: 1, value: 'no border' })],
+      }),
+    );
+
+    expect(result.lines).toHaveLength(0);
+  });
+
   it('罫線スタイルを Box の border に反映する', () => {
     const result = parseSheet(
       createMinimalSheet({

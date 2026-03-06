@@ -2,6 +2,7 @@ import type { BoxDefinition } from '@domain/box';
 import { createBox, generateBoxId, resetBoxIdCounter } from '@domain/box';
 import type { HorizontalAlignment, VerticalAlignment } from '@domain/box';
 import type { LineDefinition } from '@domain/line';
+import { extractLines, resetLineIdCounter } from '@domain/line';
 import {
   DEFAULT_MARGINS,
   type Margins,
@@ -52,6 +53,7 @@ const DEFAULT_ROW_HEIGHT = 15;
  */
 export function parseSheet(raw: RawSheetData): ParsedSheet {
   resetBoxIdCounter();
+  resetLineIdCounter();
 
   const filtered = applyPrintArea(raw);
   const paper = buildPaperDefinition(filtered.pageSetup, filtered.margins);
@@ -73,10 +75,12 @@ export function parseSheet(raw: RawSheetData): ParsedSheet {
     effectiveScale,
   );
 
+  const lines = extractLines(boxes);
+
   return {
     paper,
     boxes,
-    lines: [],
+    lines,
   };
 }
 
