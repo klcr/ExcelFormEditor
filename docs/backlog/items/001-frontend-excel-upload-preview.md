@@ -1,10 +1,10 @@
 # 001-フロントエンド: Excel アップロード & プレビュー
 
 ## 状態
-進行中
+完了
 
 ## 担当
-未定
+Claude
 
 ## 対象パッケージ
 web / domain
@@ -39,7 +39,7 @@ Phase 1 に対応するフロントエンド実装。
 - [x] `src/web/components/preview/PreviewCanvas.tsx` — ボックスモデルを SVG で描画
 - [x] `src/web/components/preview/PaperView.tsx` — 用紙サイズに応じた表示スケーリング
 - [x] `src/web/utils/svgHelpers.ts` — SVG 描画ユーティリティ
-- [ ] 統合テスト（ファイルアップロード → プレビュー表示）
+- [x] 統合テスト（ファイルアップロード → プレビュー表示）
 
 ## 備考
 

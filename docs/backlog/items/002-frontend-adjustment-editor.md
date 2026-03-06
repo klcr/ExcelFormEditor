@@ -1,10 +1,10 @@
 # 002-フロントエンド: 調整エディタ
 
 ## 状態
-未着手
+進行中
 
 ## 担当
-未定
+Claude
 
 ## 対象パッケージ
 web
@@ -20,17 +20,17 @@ Phase 2 に対応するフロントエンド実装。
 自動変換で生じた位置ずれやサイズ不一致をユーザーが直感的に修正できるようにする。
 
 ## 前提条件チェックリスト
-- [ ] 001-frontend-excel-upload-preview が完了（Step B まで）
-- [ ] `src/domain/box/` — ボックスの移動・リサイズ・分割ロジック
+- [x] 001-frontend-excel-upload-preview が完了（Step B まで）
+- [x] `src/domain/box/` — ボックスの移動・リサイズ・分割ロジック
 
 ## 実装チェックリスト
 
 ### Step A: 基本操作
-- [ ] `src/web/components/editor/BoxEditor/BoxOverlay.tsx` — ボックス選択 UI（クリック・矩形選択）
-- [ ] `src/web/components/editor/BoxEditor/DragHandle.tsx` — ドラッグ移動
-- [ ] `src/web/components/editor/BoxEditor/ResizeHandle.tsx` — リサイズハンドル（8方向）
-- [ ] `src/web/hooks/useBoxEditor.ts` — 選択・移動・リサイズの状態管理
-- [ ] 各コンポーネントの単体テスト
+- [x] `src/web/components/editor/BoxEditor/BoxOverlay.tsx` — ボックス選択 UI（クリック・矩形選択）
+- [x] `src/web/components/editor/BoxEditor/DragHandle.tsx` — ドラッグ移動
+- [x] `src/web/components/editor/BoxEditor/ResizeHandle.tsx` — リサイズハンドル（8方向）
+- [x] `src/web/hooks/useBoxEditor.ts` — 選択・移動・リサイズの状態管理
+- [x] 各コンポーネントの単体テスト
 
 ### Step B: 高度な操作
 - [ ] `src/web/components/editor/SnapGuide/SnapLine.tsx` — スナップガイド線の表示
