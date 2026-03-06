@@ -58,10 +58,11 @@ const DEFAULT_ROW_HEIGHT = 15;
 export function parseSheet(raw: RawSheetData): ParsedSheet {
   resetBoxIdCounter();
 
-  const paper = buildPaperDefinition(raw.pageSetup, raw.margins);
-  const columnXPositions = buildColumnPositions(raw.columnWidths);
-  const rowYPositions = buildRowPositions(raw.rowHeights);
-  const mergeMap = buildMergeMap(raw.merges);
+  const filtered = applyPrintArea(raw);
+  const paper = buildPaperDefinition(filtered.pageSetup, filtered.margins);
+  const columnXPositions = buildColumnPositions(filtered.columnWidths);
+  const rowYPositions = buildRowPositions(filtered.rowHeights);
+  const mergeMap = buildMergeMap(filtered.merges);
 
   const effectiveScale = calculateEffectiveScale(
     paper.scaling,
@@ -69,12 +70,113 @@ export function parseSheet(raw: RawSheetData): ParsedSheet {
     computeContentSize(columnXPositions, rowYPositions),
   );
 
-  const boxes = buildBoxes(raw.cells, columnXPositions, rowYPositions, mergeMap, effectiveScale);
+  const boxes = buildBoxes(
+    filtered.cells,
+    columnXPositions,
+    rowYPositions,
+    mergeMap,
+    effectiveScale,
+  );
 
   return {
     paper,
     boxes,
     lines: [],
+  };
+}
+
+/** 印刷領域の範囲情報 */
+export type PrintAreaRange = {
+  readonly startCol: number;
+  readonly startRow: number;
+  readonly endCol: number;
+  readonly endRow: number;
+};
+
+/**
+ * printArea 文字列をパースして範囲情報を返す。
+ * ExcelJS の printArea は 'A1:D20' や 'Sheet1!A1:D20' の形式。
+ */
+export function parsePrintArea(printArea?: string): PrintAreaRange | null {
+  if (!printArea) return null;
+
+  // シート名プレフィックスを除去（例: "'Sheet1'!A1:D20" → "A1:D20"）
+  const withoutSheet = printArea.includes('!')
+    ? printArea.slice(printArea.lastIndexOf('!') + 1)
+    : printArea;
+
+  // $ 記号を除去（絶対参照: $A$1:$D$20 → A1:D20）
+  const cleaned = withoutSheet.replace(/\$/g, '');
+
+  return parseCellRange(cleaned);
+}
+
+/**
+ * printArea が設定されている場合、RawSheetData をフィルタリング・リマップする。
+ * - セルを印刷領域内のみに絞り込む
+ * - 列幅・行高を印刷領域の範囲に切り出す
+ * - セルの row/col を印刷領域の起点からの相対値にリマップする
+ * - 結合範囲も同様にリマップする
+ */
+export function applyPrintArea(raw: RawSheetData): RawSheetData {
+  const range = parsePrintArea(raw.pageSetup.printArea);
+  if (!range) return raw;
+
+  const { startCol, startRow, endCol, endRow } = range;
+
+  // 列幅を印刷領域分だけ切り出し（0-indexed: startCol-1 ~ endCol-1）
+  const slicedColumnWidths = raw.columnWidths.slice(startCol - 1, endCol);
+
+  // 行高を印刷領域分だけ切り出し（0-indexed: startRow-1 ~ endRow-1）
+  const slicedRowHeights = raw.rowHeights.slice(startRow - 1, endRow);
+
+  // セルをフィルタリング＋リマップ
+  const filteredCells: RawCell[] = [];
+  for (const cell of raw.cells) {
+    if (cell.row >= startRow && cell.row <= endRow && cell.col >= startCol && cell.col <= endCol) {
+      filteredCells.push({
+        ...cell,
+        address: columnNumberToLetter(cell.col - startCol + 1) + (cell.row - startRow + 1),
+        row: cell.row - startRow + 1,
+        col: cell.col - startCol + 1,
+      });
+    }
+  }
+
+  // 結合範囲をリマップ（印刷領域と交差するもののみ）
+  const remappedMerges: string[] = [];
+  for (const merge of raw.merges) {
+    const parsed = parseCellRange(merge);
+    if (!parsed) continue;
+
+    // 印刷領域と交差しない結合はスキップ
+    if (
+      parsed.endCol < startCol ||
+      parsed.startCol > endCol ||
+      parsed.endRow < startRow ||
+      parsed.startRow > endRow
+    ) {
+      continue;
+    }
+
+    // 印刷領域内にクリップしてリマップ
+    const clippedStartCol = Math.max(parsed.startCol, startCol) - startCol + 1;
+    const clippedStartRow = Math.max(parsed.startRow, startRow) - startRow + 1;
+    const clippedEndCol = Math.min(parsed.endCol, endCol) - startCol + 1;
+    const clippedEndRow = Math.min(parsed.endRow, endRow) - startRow + 1;
+
+    const remapped =
+      `${columnNumberToLetter(clippedStartCol)}${clippedStartRow}:` +
+      `${columnNumberToLetter(clippedEndCol)}${clippedEndRow}`;
+    remappedMerges.push(remapped);
+  }
+
+  return {
+    ...raw,
+    columnWidths: slicedColumnWidths,
+    rowHeights: slicedRowHeights,
+    cells: filteredCells,
+    merges: remappedMerges,
   };
 }
 

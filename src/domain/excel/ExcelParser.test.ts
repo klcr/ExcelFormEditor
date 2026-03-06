@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyPrintArea,
   buildColumnPositions,
   buildMergeMap,
   buildRowPositions,
   columnNumberToLetter,
   letterToColumnNumber,
   parseCellRange,
+  parsePrintArea,
   parseSheet,
   resolveOrientation,
   resolvePaperSize,
@@ -441,5 +443,220 @@ describe('parseSheet', () => {
 
     expect(result.boxes).toHaveLength(1);
     expect(result.boxes[0]!.content).toBe('範囲内');
+  });
+});
+
+// --- parsePrintArea テスト ---
+
+describe('parsePrintArea', () => {
+  it('undefined → null', () => {
+    expect(parsePrintArea(undefined)).toBeNull();
+  });
+
+  it('空文字 → null', () => {
+    expect(parsePrintArea('')).toBeNull();
+  });
+
+  it('A1:D20 を正しくパースする', () => {
+    expect(parsePrintArea('A1:D20')).toEqual({
+      startCol: 1,
+      startRow: 1,
+      endCol: 4,
+      endRow: 20,
+    });
+  });
+
+  it('シート名プレフィックス付きをパースする', () => {
+    expect(parsePrintArea("'Sheet1'!A1:D20")).toEqual({
+      startCol: 1,
+      startRow: 1,
+      endCol: 4,
+      endRow: 20,
+    });
+  });
+
+  it('絶対参照（$付き）をパースする', () => {
+    expect(parsePrintArea('$A$1:$D$20')).toEqual({
+      startCol: 1,
+      startRow: 1,
+      endCol: 4,
+      endRow: 20,
+    });
+  });
+
+  it('シート名 + 絶対参照の組み合わせ', () => {
+    expect(parsePrintArea("'テスト'!$B$3:$F$50")).toEqual({
+      startCol: 2,
+      startRow: 3,
+      endCol: 6,
+      endRow: 50,
+    });
+  });
+});
+
+// --- applyPrintArea テスト ---
+
+describe('applyPrintArea', () => {
+  it('printArea 未設定の場合はデータをそのまま返す', () => {
+    const sheet = createMinimalSheet();
+    const result = applyPrintArea(sheet);
+    expect(result).toBe(sheet);
+  });
+
+  it('printArea で列幅を切り出す', () => {
+    const sheet = createMinimalSheet({
+      pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100, printArea: 'B1:C3' },
+      columnWidths: [10, 20, 30],
+      rowHeights: [15, 15, 15],
+      cells: [],
+      merges: [],
+    });
+
+    const result = applyPrintArea(sheet);
+    // B=col2, C=col3 → slice(1, 3) = [20, 30]
+    expect(result.columnWidths).toEqual([20, 30]);
+  });
+
+  it('printArea で行高を切り出す', () => {
+    const sheet = createMinimalSheet({
+      pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100, printArea: 'A2:C3' },
+      columnWidths: [8.43, 8.43, 8.43],
+      rowHeights: [10, 20, 30],
+      cells: [],
+      merges: [],
+    });
+
+    const result = applyPrintArea(sheet);
+    // row2~3 → slice(1, 3) = [20, 30]
+    expect(result.rowHeights).toEqual([20, 30]);
+  });
+
+  it('印刷領域外のセルをフィルタリングする', () => {
+    const sheet = createMinimalSheet({
+      pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100, printArea: 'B2:C3' },
+      columnWidths: [8.43, 8.43, 8.43],
+      rowHeights: [15, 15, 15],
+      cells: [
+        createCell({ address: 'A1', row: 1, col: 1, value: '範囲外1' }),
+        createCell({ address: 'B2', row: 2, col: 2, value: '範囲内1' }),
+        createCell({ address: 'C3', row: 3, col: 3, value: '範囲内2' }),
+        createCell({ address: 'A3', row: 3, col: 1, value: '範囲外2' }),
+      ],
+      merges: [],
+    });
+
+    const result = applyPrintArea(sheet);
+    expect(result.cells).toHaveLength(2);
+    expect(result.cells[0]!.value).toBe('範囲内1');
+    expect(result.cells[1]!.value).toBe('範囲内2');
+  });
+
+  it('セルの row/col を印刷領域起点にリマップする', () => {
+    const sheet = createMinimalSheet({
+      pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100, printArea: 'B2:C3' },
+      columnWidths: [8.43, 8.43, 8.43],
+      rowHeights: [15, 15, 15],
+      cells: [
+        createCell({ address: 'B2', row: 2, col: 2, value: '左上' }),
+        createCell({ address: 'C3', row: 3, col: 3, value: '右下' }),
+      ],
+      merges: [],
+    });
+
+    const result = applyPrintArea(sheet);
+    // B2 → row:1, col:1（リマップ後）
+    expect(result.cells[0]!.row).toBe(1);
+    expect(result.cells[0]!.col).toBe(1);
+    expect(result.cells[0]!.address).toBe('A1');
+    // C3 → row:2, col:2（リマップ後）
+    expect(result.cells[1]!.row).toBe(2);
+    expect(result.cells[1]!.col).toBe(2);
+    expect(result.cells[1]!.address).toBe('B2');
+  });
+
+  it('結合範囲を印刷領域内にクリップ・リマップする', () => {
+    const sheet = createMinimalSheet({
+      pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100, printArea: 'B2:D4' },
+      columnWidths: [8.43, 8.43, 8.43, 8.43],
+      rowHeights: [15, 15, 15, 15],
+      cells: [],
+      merges: ['B2:C3', 'A1:A2'],
+    });
+
+    const result = applyPrintArea(sheet);
+    // B2:C3 → リマップ: A1:B2
+    expect(result.merges).toContain('A1:B2');
+    // A1:A2 は印刷領域外なので除外
+    expect(result.merges).toHaveLength(1);
+  });
+});
+
+// --- parseSheet + printArea 統合テスト ---
+
+describe('parseSheet with printArea', () => {
+  it('printArea が設定されている場合、領域内のセルのみ Box に変換する', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100, printArea: 'A1:B2' },
+        columnWidths: [8.43, 8.43, 8.43],
+        rowHeights: [15, 15, 15],
+        cells: [
+          createCell({ address: 'A1', row: 1, col: 1, value: '領域内' }),
+          createCell({ address: 'B2', row: 2, col: 2, value: '領域内2' }),
+          createCell({ address: 'C3', row: 3, col: 3, value: '領域外' }),
+        ],
+        merges: [],
+      }),
+    );
+
+    expect(result.boxes).toHaveLength(2);
+    expect(result.boxes[0]!.content).toBe('領域内');
+    expect(result.boxes[1]!.content).toBe('領域内2');
+  });
+
+  it('printArea の先頭セルが原点(0,0)にマップされる', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100, printArea: 'B2:C3' },
+        columnWidths: [8.43, 8.43, 8.43],
+        rowHeights: [15, 15, 15],
+        cells: [createCell({ address: 'B2', row: 2, col: 2, value: '起点' })],
+        merges: [],
+      }),
+    );
+
+    expect(result.boxes).toHaveLength(1);
+    expect(result.boxes[0]!.rect.position.x).toBe(0);
+    expect(result.boxes[0]!.rect.position.y).toBe(0);
+  });
+
+  it('printArea 内の結合セルが正しく変換される', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100, printArea: 'B2:D4' },
+        columnWidths: [8.43, 8.43, 8.43, 8.43],
+        rowHeights: [15, 15, 15, 15],
+        cells: [
+          createCell({
+            address: 'B2',
+            row: 2,
+            col: 2,
+            value: '結合',
+            isMerged: true,
+            mergeRange: 'B2:C3',
+          }),
+          createCell({ address: 'C2', row: 2, col: 3, value: '', isMerged: true }),
+          createCell({ address: 'B3', row: 3, col: 2, value: '', isMerged: true }),
+          createCell({ address: 'C3', row: 3, col: 3, value: '', isMerged: true }),
+        ],
+        merges: ['B2:C3'],
+      }),
+    );
+
+    expect(result.boxes).toHaveLength(1);
+    expect(result.boxes[0]!.content).toBe('結合');
+    // 結合セルは 2列×2行分のサイズ
+    expect(result.boxes[0]!.rect.position.x).toBe(0);
+    expect(result.boxes[0]!.rect.position.y).toBe(0);
   });
 });

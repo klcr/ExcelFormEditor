@@ -6,7 +6,7 @@ export type {
   RawPageSetup,
   RawSheetData,
 } from './ExcelTypes';
-export type { ParsedSheet } from './ExcelParser';
+export type { ParsedSheet, PrintAreaRange } from './ExcelParser';
 export {
   parseSheet,
   resolvePaperSize,
@@ -16,6 +16,8 @@ export {
   buildRowPositions,
   buildMergeMap,
   parseCellRange,
+  parsePrintArea,
+  applyPrintArea,
   letterToColumnNumber,
   columnNumberToLetter,
 } from './ExcelParser';
