@@ -24,10 +24,11 @@
     "@biomejs/biome": "^1.9.0",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.1.0",
-    "@types/node": "^25.3.3",
+    "@types/node": "^25.3.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "exceljs": "^4.4.0",
     "husky": "^9.1.0",
     "jsdom": "^25.0.0",
     "lint-staged": "^15.2.0",
@@ -36,7 +37,11 @@
     "vitest": "^2.1.0"
   },
   "lint-staged": {
-    "*.{ts,tsx}": ["biome check --write --no-errors-on-unmatched"],
-    "*.{json,css}": ["biome format --write --no-errors-on-unmatched"]
+    "*.{ts,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ],
+    "*.{json,css}": [
+      "biome format --write --no-errors-on-unmatched"
+    ]
   }
 }
