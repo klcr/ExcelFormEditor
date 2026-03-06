@@ -21,6 +21,7 @@ domain / web
   1. **Web 層の parseExcelFile でスレーブセルが渡されていない**: `eachCell({ includeEmpty: false })` によりスタイルのみ・値なしのスレーブセルがスキップされている可能性
   2. **ExcelJS のスレーブセル罫線取得の挙動**: PoC では罫線が取得できていたが、実ファイルでは異なるパターンがあり得る
   3. **CSS レンダリング側の問題**: ボーダー情報は正しく Box に格納されているが、CSS 描画で欠落している可能性
+- 2026-03-06: 根本原因を特定 — Web 層の `parseExcelFile.ts` で `eachCell({ includeEmpty: false })` により、値のない結合スレーブセルがスキップされていた。ドメイン層の `collectMergeBorder()` は正しく動作していたが、入力データにスレーブセルの罫線情報が含まれていなかった。
 
 ## 関連ドキュメント
 
@@ -29,10 +30,10 @@ domain / web
 - `poc/exceljs/REPORT.md` — ExcelJS PoC（深掘りA: 結合セルの罫線スタイル）
 
 ## 解決方法
-（未解決）
+`collectMergePerimeterCells()` 関数を追加し、結合範囲の外周セルの罫線データを補完収集するようにした。`eachCell` ループの後に外周セルを `ws.getCell()` で取得し、罫線があれば `cells` 配列に追加する。
 
 ## 状態
-未解決
+解決済（実ファイル最終検証待ち）
 
 ## 解決日
-（未解決）
+2026-03-06
