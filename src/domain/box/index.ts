@@ -25,3 +25,7 @@ export {
   splitBoxHorizontal,
   splitBoxVertical,
 } from './BoxOperations';
+export { mergeBoxes, validateMerge } from './BoxMerge';
+export type { MergeValidation } from './BoxMerge';
+export { EMPTY_SNAP_GUIDE_RESULT, applySnap, findSnapGuides } from './SnapGuide';
+export type { SnapEdge, SnapGuidePoint, SnapGuideResult } from './SnapGuide';
