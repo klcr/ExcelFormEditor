@@ -69,14 +69,49 @@ function formatCellValue(value: ExcelJS.CellValue): { text: string; type: string
   if (typeof value === 'number') return { text: String(value), type: 'number' };
   if (typeof value === 'boolean') return { text: String(value), type: 'boolean' };
   if (value instanceof Date) return { text: value.toLocaleDateString('ja-JP'), type: 'date' };
-  if (typeof value === 'object' && 'formula' in value) {
-    return { text: `=${value.formula} → ${value.result}`, type: 'formula' };
+  if (typeof value === 'object') {
+    // Date duck-typing（jsdom環境で instanceof Date が失敗する場合の対策）
+    if (typeof (value as unknown as Date).getTime === 'function') {
+      return { text: (value as unknown as Date).toLocaleDateString('ja-JP'), type: 'date' };
+    }
+    // 数式セル: { formula: "...", result: ... }
+    if ('formula' in value) {
+      const formulaValue = value as { formula: string; result?: unknown };
+      const result = formulaValue.result;
+      if (result === null || result === undefined) {
+        return { text: '', type: 'formula' };
+      }
+      if (typeof result === 'object' && result !== null && 'error' in result) {
+        return { text: String((result as { error: string }).error), type: 'formula' };
+      }
+      return { text: String(result), type: 'formula' };
+    }
+    // 共有数式セル: { sharedFormula: "..." }（result を持たない場合がある）
+    if ('sharedFormula' in value) {
+      const shared = value as { sharedFormula: string; result?: unknown };
+      if (shared.result !== null && shared.result !== undefined) {
+        if (typeof shared.result === 'object' && 'error' in shared.result) {
+          return { text: String((shared.result as { error: string }).error), type: 'formula' };
+        }
+        return { text: String(shared.result), type: 'formula' };
+      }
+      return { text: '', type: 'formula' };
+    }
+    // リッチテキスト
+    if ('richText' in value) {
+      const text = value.richText.map((rt) => rt.text).join('');
+      return { text, type: 'richText' };
+    }
+    // エラーセル: { error: "#REF!" } など
+    if ('error' in value) {
+      return { text: String((value as { error: string }).error), type: 'error' };
+    }
+    // ハイパーリンク: { text: "...", hyperlink: "..." }
+    if ('text' in value) {
+      return { text: String((value as { text: string }).text), type: 'hyperlink' };
+    }
   }
-  if (typeof value === 'object' && 'richText' in value) {
-    const text = value.richText.map((rt) => rt.text).join('');
-    return { text, type: 'richText' };
-  }
-  return { text: JSON.stringify(value), type: 'object' };
+  return { text: String(value), type: 'unknown' };
 }
 
 /** ARGB 文字列から先頭の 'FF' を除去して 6 桁 hex にする */
@@ -94,7 +129,7 @@ function extractFillColor(fill: ExcelJS.Fill | undefined | null): string | undef
 
 /** ExcelJS の border を RawCell 用の border 構造に変換する */
 function extractBorderData(
-  borderRaw: ExcelJS.Borders | undefined | null,
+  borderRaw: Partial<ExcelJS.Borders> | undefined | null,
 ): RawCell['style']['border'] {
   if (!borderRaw) return undefined;
   return {

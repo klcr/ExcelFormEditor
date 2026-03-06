@@ -17,3 +17,11 @@ export {
   resetBoxIdCounter,
 } from './Box';
 export type { CreateBoxParams } from './Box';
+export {
+  findNearestSnapPoints,
+  moveBox,
+  resizeBox,
+  snapToGrid,
+  splitBoxHorizontal,
+  splitBoxVertical,
+} from './BoxOperations';
