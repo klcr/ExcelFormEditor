@@ -106,6 +106,66 @@ export async function createTestWorkbook(): Promise<Buffer> {
     fgColor: { argb: 'FFFFFF00' }, // 黄色
   };
 
+  // ── 結合セル罫線パターン（検証項目: 結合境界の内側罫線） ──
+
+  // パターン1: 結合前に全セルに罫線を設定 → 結合 → 内側罫線はどうなるか
+  // B10:D10 を結合（横3セル）
+  for (const col of [2, 3, 4]) {
+    const cell = sheet.getCell(10, col);
+    cell.value = col === 2 ? '結合罫線テスト1' : undefined;
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'thin', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } },
+    };
+  }
+  sheet.mergeCells('B10:D10');
+
+  // パターン2: 先に結合してから master に外枠罫線を設定
+  // B12:D13 を結合（2x3 ブロック）
+  sheet.mergeCells('B12:D13');
+  const masterB12 = sheet.getCell('B12');
+  masterB12.value = '結合罫線テスト2';
+  masterB12.border = {
+    top: { style: 'medium', color: { argb: 'FF0000FF' } },
+    bottom: { style: 'medium', color: { argb: 'FF0000FF' } },
+    left: { style: 'medium', color: { argb: 'FF0000FF' } },
+    right: { style: 'medium', color: { argb: 'FF0000FF' } },
+  };
+
+  // パターン3: 結合範囲の外周セルに個別に罫線を設定（Excel実際の動作に近い）
+  // B15:D16 を結合
+  sheet.mergeCells('B15:D16');
+  // 上辺: B15, C15, D15 の top
+  for (const col of [2, 3, 4]) {
+    sheet.getCell(15, col).border = {
+      ...sheet.getCell(15, col).border,
+      top: { style: 'thick', color: { argb: 'FFFF0000' } },
+    };
+  }
+  // 下辺: B16, C16, D16 の bottom
+  for (const col of [2, 3, 4]) {
+    sheet.getCell(16, col).border = {
+      ...sheet.getCell(16, col).border,
+      bottom: { style: 'thick', color: { argb: 'FFFF0000' } },
+    };
+  }
+  // 左辺: B15, B16 の left
+  for (const row of [15, 16]) {
+    sheet.getCell(row, 2).border = {
+      ...sheet.getCell(row, 2).border,
+      left: { style: 'thick', color: { argb: 'FFFF0000' } },
+    };
+  }
+  // 右辺: D15, D16 の right
+  for (const row of [15, 16]) {
+    sheet.getCell(row, 4).border = {
+      ...sheet.getCell(row, 4).border,
+      right: { style: 'thick', color: { argb: 'FFFF0000' } },
+    };
+  }
+
   // ── fitToPage 設定のシート（2枚目） ──
   const sheet2 = workbook.addWorksheet('fitToPage');
   sheet2.pageSetup.fitToPage = true;

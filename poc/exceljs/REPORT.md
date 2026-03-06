@@ -55,6 +55,47 @@
 | 003（印刷倍率の反映） | ◎ | `pageSetup.scale` / `.fitToPage` / `.fitToWidth` / `.fitToHeight` が独立プロパティ。`ScalingConfig` への変換が直接的 |
 | 004（余白のインチ保持） | ◎ | `pageSetup.margins` がインチ値そのまま。`Margins` 型への変換がノーコスト |
 
+## 深掘り検証（2026-03-06 追加）
+
+### 検証A: 結合セルの罫線スタイル（結合境界の内側罫線の扱い）
+
+3パターンで検証。全て .xlsx 書き出し→読み戻し後の挙動。
+
+| パターン | 設定手順 | 結果 |
+|---------|---------|------|
+| 1. 罫線設定後に結合 (B10:D10) | 各セルに thin 罫線 → mergeCells | **slave セル (C10, D10) にも罫線情報が残る**。内側の left/right も保持される。 |
+| 2. 結合後に master 罫線設定 (B12:D13) | mergeCells → master に medium 罫線 | **全 slave セル (C12〜D13) に master と同一の border が伝播**。内側セルも 4辺全て medium。 |
+| 3. 外周セルに個別罫線設定 (B15:D16) | mergeCells → 各外周セルに thick 罫線 | **外周セルの罫線は正しく取得可能**。内側セル (C15, C16) にも設定した罫線がそのまま残る。 |
+
+**重要な発見:**
+
+ExcelJS は結合セルの罫線について以下の挙動を示す:
+
+1. **slave セルは独自の border プロパティを持つ** — master からの参照ではなく、各セルが個別に border を保持する
+2. **結合境界の内側罫線は消えない** — Excel の表示上は内側罫線が非表示になるが、ExcelJS のデータモデルでは保持される
+3. **パーサー実装への示唆**: 結合セルのボックス変換時は、**master の border のみを外枠として採用し、slave の border は無視する**のが正しいアプローチ。内側罫線は「結合による非表示」として扱うべき。
+
+### 検証B: pageMargins（制約004 詳細）
+
+| 検証項目 | 結果 |
+|---------|------|
+| 6属性のインチ値取得 | ○ top=0.8, bottom=0.6, left=0.5, right=0.5, header=0.3, footer=0.25 |
+| 未設定時のデフォルト値 | ○ ExcelJS デフォルト: top=0.75, bottom=0.75, left=0.7, right=0.7, header=0.3, footer=0.3 |
+| mm 変換の整合性 | ○ `marginInches × 25.4` で正確に変換可能。printableArea: 184.6 × 261.4 mm (A4 + 設定マージン) |
+
+**注意**: ExcelJS のデフォルト値 (left/right=0.7) は Excel 既定値 (left/right=0.75) と若干異なる。実際の .xlsx ファイルを読み込む場合は Excel が書き込んだ値が使われるため問題ないが、pageMargins 要素が欠落したファイルでは差異が生じうる。
+
+### 検証C: pageSetup scale / fitToPage（制約003 詳細）
+
+| 検証項目 | 結果 |
+|---------|------|
+| scale モード (sheet1) | ○ scale=80, fitToPage=false。排他的に判定可能 |
+| fitToPage モード (sheet2) | ○ fitToPage=true, fitToWidth=1, fitToHeight=0 |
+| fitToPage シートの scale 値 | scale=100 が返る（Excel のデフォルト値）。制約003 のフォールバック: fitToPage=true の場合 scale は無視して fitToPage ロジックを適用すればよい |
+| effectiveScale 計算 | ○ scale モード: `scale / 100 = 0.8` で制約003 と整合 |
+
+**判定ロジック**: `fitToPage === true` なら fitToPage モード、それ以外なら `scale / 100` を effectiveScale とする。`fitToPage=true` 時に scale=100 が返るのは ExcelJS の仕様であり、判定に影響しない。
+
 ## 結論
 
 ExcelJS は制約 001〜004 で必要な全情報を明快な API で提供しており、本プロジェクトの要件に適合する。ADR-002 の判断材料として、ExcelJS は有力な候補である。
