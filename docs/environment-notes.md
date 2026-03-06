@@ -23,6 +23,21 @@ OS・CI 環境に起因する問題と対策を蓄積する。
 | lint エラーの分割修正 | エラーの全量を先に確認し、1件ずつ修正 → push のサイクルを避ける |
 | フォーマッター違反 | Biome format の違反は error 扱い |
 
+## TypeScript strict モード
+
+| 事象 | 対策 |
+|------|------|
+| `noUncheckedIndexedAccess` で配列アクセスが `T \| undefined` | ループ内の安全なアクセスは `!` を使用。不確定なアクセスは `??` でデフォルト値を適用 |
+| 正規表現キャプチャグループが `string \| undefined` | null チェック後のキャプチャグループには `match[1]!` を使用 |
+| テストコードの配列アクセス | `result.items[0]!.prop` パターンを標準とする |
+
+## ExcelJS 型定義
+
+| 事象 | 対策 |
+|------|------|
+| `Address.row` / `Address.col` が `string` 型 | ドメイン型への変換時に `Number(cell.row)` で明示変換する |
+| `Cell` が `Address` を継承 | `cell.fullAddress.row` (number) と `cell.row` (string) を混同しない |
+
 ## Claude Code 環境
 
 | 事象 | 対策 |

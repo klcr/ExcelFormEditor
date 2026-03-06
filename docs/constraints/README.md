@@ -77,3 +77,4 @@ domain / web / root
 | 002 | 座標原点 — 印刷可能領域基準 | domain | 有効 | 2026-03-05 |
 | 003 | 印刷倍率の座標変換への反映 | domain | 有効 | 2026-03-05 |
 | 004 | Excel余白の読み出しと保持 | domain | 有効 | 2026-03-05 |
+| 005 | noUncheckedIndexedAccess と ExcelJS 型の不一致 | domain / web | 有効 | 2026-03-06 |
