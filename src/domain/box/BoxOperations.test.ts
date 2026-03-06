@@ -373,10 +373,10 @@ describe('findNearestSnapPoints', () => {
     expect(result.x.filter((v) => v === 60).length).toBe(1);
     // results should be sorted
     for (let i = 1; i < result.x.length; i++) {
-      expect(result.x[i]).toBeGreaterThanOrEqual(result.x[i - 1]);
+      expect(result.x[i]).toBeGreaterThanOrEqual(result.x[i - 1] as number);
     }
     for (let i = 1; i < result.y.length; i++) {
-      expect(result.y[i]).toBeGreaterThanOrEqual(result.y[i - 1]);
+      expect(result.y[i]).toBeGreaterThanOrEqual(result.y[i - 1] as number);
     }
   });
 });

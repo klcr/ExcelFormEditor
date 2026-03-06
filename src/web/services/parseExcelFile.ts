@@ -94,7 +94,7 @@ function extractFillColor(fill: ExcelJS.Fill | undefined | null): string | undef
 
 /** ExcelJS の border を RawCell 用の border 構造に変換する */
 function extractBorderData(
-  borderRaw: ExcelJS.Borders | undefined | null,
+  borderRaw: Partial<ExcelJS.Borders> | undefined | null,
 ): RawCell['style']['border'] {
   if (!borderRaw) return undefined;
   return {
