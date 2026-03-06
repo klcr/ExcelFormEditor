@@ -71,8 +71,8 @@ function formatCellValue(value: ExcelJS.CellValue): { text: string; type: string
   if (value instanceof Date) return { text: value.toLocaleDateString('ja-JP'), type: 'date' };
   if (typeof value === 'object') {
     // Date duck-typing（jsdom環境で instanceof Date が失敗する場合の対策）
-    if (typeof (value as Date).getTime === 'function') {
-      return { text: (value as Date).toLocaleDateString('ja-JP'), type: 'date' };
+    if (typeof (value as unknown as Date).getTime === 'function') {
+      return { text: (value as unknown as Date).toLocaleDateString('ja-JP'), type: 'date' };
     }
     // 数式セル: { formula: "...", result: ... }
     if ('formula' in value) {

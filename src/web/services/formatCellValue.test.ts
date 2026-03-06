@@ -17,8 +17,8 @@ function formatCellValue(value: ExcelJS.CellValue): { text: string; type: string
   if (typeof value === 'boolean') return { text: String(value), type: 'boolean' };
   if (value instanceof Date) return { text: value.toLocaleDateString('ja-JP'), type: 'date' };
   if (typeof value === 'object') {
-    if (typeof (value as Date).getTime === 'function') {
-      return { text: (value as Date).toLocaleDateString('ja-JP'), type: 'date' };
+    if (typeof (value as unknown as Date).getTime === 'function') {
+      return { text: (value as unknown as Date).toLocaleDateString('ja-JP'), type: 'date' };
     }
     if ('formula' in value) {
       const formulaValue = value as { formula: string; result?: unknown };
