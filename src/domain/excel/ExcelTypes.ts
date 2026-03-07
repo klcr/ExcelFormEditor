@@ -67,6 +67,8 @@ export type RawSheetData = {
   readonly cells: readonly RawCell[];
   /** 結合範囲（例: ['A1:C2', 'D5:D8']） */
   readonly merges: readonly string[];
+  /** 行改ページ位置（1-indexed）。行Nにブレークがある = 行Nの後で改ページ */
+  readonly rowBreaks: readonly number[];
 };
 
 /** Excelデータ全体（生データ） */

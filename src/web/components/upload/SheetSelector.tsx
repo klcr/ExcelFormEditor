@@ -4,6 +4,7 @@ type SheetInfo = {
   readonly name: string;
   readonly paperSize: string;
   readonly orientation: string;
+  readonly pageCount?: number;
 };
 
 type SheetSelectorProps = {
@@ -53,6 +54,7 @@ export function SheetSelector({
               {sheet.name}
               <span className={styles.sheetInfo}>
                 {sheet.paperSize} {sheet.orientation}
+                {sheet.pageCount != null && sheet.pageCount > 1 && ` (${sheet.pageCount}ページ)`}
               </span>
             </label>
           </div>

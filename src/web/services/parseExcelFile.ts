@@ -1,5 +1,5 @@
 import type { ParsedSheet, RawCell, RawSheetData } from '@domain/excel';
-import { parseSheet } from '@domain/excel';
+import { parseSheet, splitByRowBreaks } from '@domain/excel';
 import ExcelJS from 'exceljs';
 
 /** シートごとのデバッグ用パース結果 */
@@ -47,10 +47,17 @@ export type ExcelParseResult = {
   readonly sheets: readonly SheetParseResult[];
 };
 
+/** シートごとのパース出力（1シート → 複数ページの可能性あり） */
+export type SheetParseOutput = {
+  readonly sheetIndex: number;
+  readonly sheetName: string;
+  readonly pages: readonly ParsedSheet[];
+};
+
 /** ドメイン変換込みの完全パース結果 */
 export type FullParseResult = {
   readonly debug: ExcelParseResult;
-  readonly parsed: readonly ParsedSheet[];
+  readonly sheets: readonly SheetParseOutput[];
 };
 
 const MAX_SAMPLE_CELLS = 20;
@@ -325,6 +332,9 @@ function worksheetToRawSheetData(ws: ExcelJS.Worksheet): RawSheetData {
     rowHeights,
     cells,
     merges,
+    rowBreaks: ((ws as unknown as { rowBreaks?: { id: number }[] }).rowBreaks ?? []).map(
+      (rb) => rb.id,
+    ),
   };
 }
 
@@ -403,13 +413,22 @@ export async function parseExcelFile(file: File): Promise<FullParseResult> {
   await workbook.xlsx.load(buffer);
 
   const debugSheets: SheetParseResult[] = [];
-  const parsedSheets: ParsedSheet[] = [];
+  const sheets: SheetParseOutput[] = [];
+  let sheetIndex = 0;
 
   workbook.eachSheet((ws) => {
     debugSheets.push(worksheetToDebugResult(ws));
 
     const rawData = worksheetToRawSheetData(ws);
-    parsedSheets.push(parseSheet(rawData));
+    const subPages = splitByRowBreaks(rawData);
+    const pages = subPages.map((sub) => parseSheet(sub));
+
+    sheets.push({
+      sheetIndex,
+      sheetName: ws.name,
+      pages,
+    });
+    sheetIndex++;
   });
 
   return {
@@ -418,7 +437,7 @@ export async function parseExcelFile(file: File): Promise<FullParseResult> {
       sheetCount: debugSheets.length,
       sheets: debugSheets,
     },
-    parsed: parsedSheets,
+    sheets,
   };
 }
 

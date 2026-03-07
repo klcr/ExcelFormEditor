@@ -15,6 +15,7 @@ import { useExcelParse } from '@web/hooks/useExcelParse';
 import { useFileUpload } from '@web/hooks/useFileUpload';
 import { useLayoutMode } from '@web/hooks/useLayoutMode';
 import { useMultiPageEditor } from '@web/hooks/useMultiPageEditor';
+import type { SheetParseOutput } from '@web/services/parseExcelFile';
 import { paperSizeLabel } from '@web/services/parseExcelFile';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './App.module.css';
@@ -35,6 +36,32 @@ const NAV_ITEMS = [
 
 const EMPTY_PAGES: readonly PageDefinition[] = [];
 
+/** シートの配列をフラットな PageDefinition[] に変換する */
+function flattenSheets(
+  sheets: readonly SheetParseOutput[],
+  selectedIndices: readonly number[],
+): PageDefinition[] {
+  const pages: PageDefinition[] = [];
+  let pageIndex = 0;
+
+  for (const sheet of sheets) {
+    if (!selectedIndices.includes(sheet.sheetIndex)) continue;
+
+    const totalSubPages = sheet.pages.length;
+    for (let subIdx = 0; subIdx < totalSubPages; subIdx++) {
+      const parsed = sheet.pages[subIdx];
+      if (!parsed) continue;
+
+      const pageName =
+        totalSubPages > 1 ? `${sheet.sheetName} (${subIdx + 1}/${totalSubPages})` : sheet.sheetName;
+      pages.push(prefixPageIds(parsed, pageIndex, pageName));
+      pageIndex++;
+    }
+  }
+
+  return pages;
+}
+
 export function App() {
   const { file, handleFileSelect, clearFile } = useFileUpload();
   const { parseState } = useExcelParse(file);
@@ -51,27 +78,25 @@ export function App() {
   // Build sheet info for SheetSelector
   const sheetInfoList = useMemo(() => {
     if (parseState.status !== 'success') return [];
-    return parseState.result.debug.sheets.map((s) => ({
-      name: s.name,
-      paperSize: paperSizeLabel(s.pageSetup.paperSize),
-      orientation: s.pageSetup.orientation ?? '未設定',
-    }));
+    return parseState.result.debug.sheets.map((s, i) => {
+      const sheetOutput = parseState.result.sheets[i];
+      const pageCount = sheetOutput?.pages.length ?? 1;
+      return {
+        name: s.name,
+        paperSize: paperSizeLabel(s.pageSetup.paperSize),
+        orientation: s.pageSetup.orientation ?? '未設定',
+        pageCount,
+      };
+    });
   }, [parseState]);
 
   // Auto-select all sheets when parse succeeds
   useEffect(() => {
     if (parseState.status === 'success') {
-      const indices = parseState.result.parsed.map((_, i) => i);
+      const indices = parseState.result.sheets.map((s) => s.sheetIndex);
       setSelectedSheetIndices(indices);
       // Auto-import all sheets
-      const pages = indices
-        .map((i) => {
-          const parsed = parseState.result.parsed[i];
-          const debug = parseState.result.debug.sheets[i];
-          if (!parsed || !debug) return null;
-          return prefixPageIds(parsed, i, debug.name);
-        })
-        .filter((p): p is PageDefinition => p !== null);
+      const pages = flattenSheets(parseState.result.sheets, indices);
       setImportedPages(pages);
       setActiveMode('preview');
     } else {
@@ -87,14 +112,7 @@ export function App() {
   // Handle re-import from SheetSelector
   const handleImport = useCallback(() => {
     if (parseState.status !== 'success') return;
-    const pages = selectedSheetIndices
-      .map((i) => {
-        const parsed = parseState.result.parsed[i];
-        const debug = parseState.result.debug.sheets[i];
-        if (!parsed || !debug) return null;
-        return prefixPageIds(parsed, i, debug.name);
-      })
-      .filter((p): p is PageDefinition => p !== null);
+    const pages = flattenSheets(parseState.result.sheets, selectedSheetIndices);
     setImportedPages(pages);
     setActiveMode('preview');
   }, [parseState, selectedSheetIndices]);
