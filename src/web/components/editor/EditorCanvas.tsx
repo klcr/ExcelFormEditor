@@ -1,4 +1,5 @@
 import type { BoxDefinition, SnapGuideResult } from '@domain/box';
+import { BoxSvg } from '../common/BoxSvg';
 import { BoxOverlay } from './BoxEditor/BoxOverlay';
 import { SnapLine } from './SnapGuide/SnapLine';
 
@@ -68,6 +69,9 @@ export function EditorCanvas({
           if (e.key === 'Escape') onDeselectAll();
         }}
       />
+      {boxes.map((box) => (
+        <BoxSvg key={`visual-${box.id}`} box={box} />
+      ))}
       {boxes.map((box) => (
         <BoxOverlay
           key={box.id}
