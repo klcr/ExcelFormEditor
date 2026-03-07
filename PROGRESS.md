@@ -32,10 +32,29 @@
 
 ## 次のアクション
 
-1. `/project:review` で設計レビュー実施
-2. 事象 002 症状 E（ボックス位置ズレ）— 実 Excel ファイル提供後に調査
+1. **Backlog 005: テーマカラー対応**（P1 最優先）— 帳票の色再現に最も影響が大きい
+2. **Backlog 006: 数値フォーマット対応**（P2）— 日付・通貨・パーセントの表示
+3. **Backlog 007: 非表示行・列の対応**（P2）— レイアウト崩れ防止
+4. 事象 002 症状 E（ボックス位置ズレ）— 実 Excel ファイル提供後に調査
+5. `/project:review` で設計レビュー実施
+
+詳細な実装指針と不足要素の分析は `docs/xlsx-parser-status.md` を参照。
 
 ## diff
+
+```diff
+# 軽量 XLSX パーサー品質改善 + ドキュメント整備（2026-03-07）
++ fix: OOXML vertical="center" → BoxTypes "middle" マッピング追加
++ fix: BoxSvg でセル内改行（\n）を行分割するよう修正
++ docs: ADR-003 軽量パーサー移行の意思決定記録を追加
++ docs: xlsx-parser-status.md — 実装状況・不足要素・拡張ガイドを作成
++ docs: Backlog 005/006/007 — テーマカラー / 数値フォーマット / 非表示行列を追加
++ docs: 制約 007 — テーマカラー未対応の制約を記録
++ 全562テスト パス — build + check-all 通過
+```
+
+<details>
+<summary>前回の diff（2026-03-07: マルチシート対応）</summary>
 
 ```diff
 # マルチシート対応（2026-03-07）
@@ -51,8 +70,10 @@
 + 全522テスト パス — build + check-all 通過
 ```
 
+</details>
+
 <details>
-<summary>前回の diff（2026-03-07: Phase 4 完了）</summary>
+<summary>前々回の diff（2026-03-07: Phase 4 完了）</summary>
 
 ```diff
 # Phase 4 完了 — PaddingSection + PropertyPanel統合 + エクスポート機能（2026-03-07）
