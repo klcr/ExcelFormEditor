@@ -30,8 +30,8 @@ describe('VariableListPanel', () => {
     const onRemove = vi.fn();
     render(<VariableListPanel variables={makeVariables()} onRemove={onRemove} />);
 
-    const deleteButtons = screen.getAllByText('削除');
-    fireEvent.click(deleteButtons[0]!);
+    const deleteButton = screen.getAllByText('削除')[0] as HTMLElement;
+    fireEvent.click(deleteButton);
 
     expect(onRemove).toHaveBeenCalledWith('v1');
   });
