@@ -455,8 +455,9 @@ function resolveHorizontalAlignment(value?: string): HorizontalAlignment | undef
   return undefined;
 }
 
-/** 垂直配置の解決 */
+/** 垂直配置の解決（OOXML は "center" を使用、BoxTypes は "middle" を定義） */
 function resolveVerticalAlignment(value?: string): VerticalAlignment | undefined {
+  if (value === 'center') return 'middle';
   if (value === 'middle' || value === 'bottom' || value === 'top') return value;
   return undefined;
 }

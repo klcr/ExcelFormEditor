@@ -78,3 +78,6 @@ domain / web
 | 002 | 調整エディタ | web | 完了 | Claude |
 | 003 | 変数バインディング UI | web | 完了 | Claude |
 | 004 | レイアウト微調整 UI | web | 完了 | Claude |
+| 005 | テーマカラー / インデックスカラー対応 | web / domain | 着手可能 | — |
+| 006 | 数値フォーマット対応 | web / domain | 未着手 | — |
+| 007 | 非表示行・列の対応 | web / domain | 未着手 | — |
