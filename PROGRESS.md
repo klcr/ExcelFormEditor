@@ -4,7 +4,7 @@
 
 ## スナップショット
 
-- **全体進捗**: 90%（Phase 1 完了、Phase 2-4 ほぼ完了）
+- **全体進捗**: 92%（Phase 1-3 完了、Phase 4 残少、Phase 5 完了）
 - **アクティブフェーズ**: Phase 4 — レイアウト微調整 UI（残: PaddingSection, エクスポート機能）
 - **ブロッカー**: なし
 - **最終変動日**: 2026-03-06
@@ -18,6 +18,7 @@
 | 2 | 調整エディタ | done | 100% | 2026-03-06 | Step A/B/C 全完了。EditorLayout統合済み |
 | 3 | 変数バインディングと型定義 | done | 100% | 2026-03-06 | Variable集約、VariableBindingSection、InterfacePreview、VariableListPanel |
 | 4 | レイアウト微調整 UI | active | 80% | 2026-03-06 | Border/Text/Fill完了、CSSジェネレータ/プレビュー完了。残: Padding, エクスポート |
+| 5 | UI動線整理 + レスポンシブ対応 | done | 100% | 2026-03-06 | useLayoutMode, BottomSheet, BottomNav, AppLayout/EditorLayoutレスポンシブ化, CssPreview統合 |
 
 ## ブロッカー
 
@@ -37,6 +38,22 @@
 ## diff
 
 ```diff
+# UI動線整理 + レスポンシブ対応（2026-03-06）
+- 全体進捗: 90%
++ 全体進捗: 92%
++ Phase 5: done / 100% — UI動線整理 + レスポンシブ対応
++ useLayoutMode フック: 画面比率（orientation）でデスクトップ/モバイル自動切替
++ BottomSheet / BottomNav 共通コンポーネント新規作成
++ AppLayout: layoutMode prop追加、モバイル時サイドバー非表示+BottomNav表示
++ EditorLayout: モバイル対応（BottomSheet内PropertyPanel）+ CssPreview統合
++ App.tsx: 3モード動線（アップロード/プレビュー/編集）、SegmentedControl風モード切替
++ 全31新規テスト パス（5テストファイル追加/更新）
+```
+
+<details>
+<summary>前回の diff（2026-03-06: Wave 0-3 並列実装）</summary>
+
+```diff
 # Wave 0-3 並列エージェント実装（2026-03-06）
 - 全体進捗: 55%
 + 全体進捗: 90%
@@ -52,6 +69,8 @@
 + Wave 3: EditorLayout統合, App.tsxモード切替, CssGenerator, FillSection, CssPreview
 + 全445テスト パス（41テストファイル）— build + check-all 通過
 ```
+
+</details>
 
 <details>
 <summary>前回の diff（2026-03-06: 整合性検証）</summary>
