@@ -22,3 +22,4 @@ export {
   columnNumberToLetter,
 } from './ExcelParser';
 export { collectMergeBorder } from './BorderConverter';
+export { splitByRowBreaks } from './PageBreakSplitter';

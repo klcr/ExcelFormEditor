@@ -92,7 +92,7 @@ function buildFullParseResult(
         },
       ],
     },
-    parsed: [{ paper, boxes, lines }],
+    sheets: [{ sheetIndex: 0, sheetName: 'Sheet1', pages: [{ paper, boxes, lines }] }],
   };
 }
 

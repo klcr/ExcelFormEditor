@@ -260,6 +260,7 @@ function createMinimalSheet(overrides?: Partial<RawSheetData>): RawSheetData {
     rowHeights: [15, 15, 15],
     cells: [],
     merges: [],
+    rowBreaks: [],
     ...overrides,
   };
 }

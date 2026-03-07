@@ -170,12 +170,21 @@ export function applyPrintArea(raw: RawSheetData): RawSheetData {
     remappedMerges.push(remapped);
   }
 
+  // 行改ページをリマップ（印刷領域内のものだけ、相対行番号に変換）
+  const remappedRowBreaks: number[] = [];
+  for (const breakRow of raw.rowBreaks) {
+    if (breakRow >= startRow && breakRow < endRow) {
+      remappedRowBreaks.push(breakRow - startRow + 1);
+    }
+  }
+
   return {
     ...raw,
     columnWidths: slicedColumnWidths,
     rowHeights: slicedRowHeights,
     cells: filteredCells,
     merges: remappedMerges,
+    rowBreaks: remappedRowBreaks,
   };
 }
 
