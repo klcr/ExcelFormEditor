@@ -1,6 +1,7 @@
 import type { ParsedSheet, RawCell, RawSheetData } from '@domain/excel';
 import { parseSheet, splitByRowBreaks } from '@domain/excel';
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 
 /** シートごとのデバッグ用パース結果 */
 export type SheetParseResult = {
@@ -406,9 +407,53 @@ function worksheetToDebugResult(ws: ExcelJS.Worksheet): SheetParseResult {
   };
 }
 
+/**
+ * xlsx の zip から各シートの行改ページ（rowBreaks）を直接読み取る。
+ *
+ * ExcelJS v4.4.0 にはバグがあり、xlsx 読み込み時に rowBreaks が失われる:
+ * 1. PageBreaksXform が ref 属性を読むが、<brk> 要素は id 属性を持つ
+ * 2. WorksheetXform.parseClose が rowBreaks をモデルに含めない
+ *
+ * このワークアラウンドは xlsx の XML から直接 <brk id="N"> を読み取る。
+ * シートインデックス（1-based）→ 行ブレーク番号配列のマップを返す。
+ */
+async function extractRowBreaksFromZip(
+  buffer: ArrayBuffer,
+): Promise<ReadonlyMap<number, readonly number[]>> {
+  const zip = await JSZip.loadAsync(buffer);
+  const result = new Map<number, readonly number[]>();
+  const sheetPattern = /^xl\/worksheets\/sheet(\d+)\.xml$/;
+
+  for (const [path, entry] of Object.entries(zip.files)) {
+    const match = path.match(sheetPattern);
+    if (!match?.[1]) continue;
+
+    const sheetNum = Number(match[1]);
+    const xml = await entry.async('string');
+    const rowBreaksMatch = xml.match(/<rowBreaks[^>]*>([\s\S]*?)<\/rowBreaks>/);
+    if (!rowBreaksMatch?.[1]) continue;
+
+    const brkPattern = /<brk\s+[^>]*id="(\d+)"[^>]*\/?>/g;
+    const breaks: number[] = [...rowBreaksMatch[1].matchAll(brkPattern)]
+      .map((m) => m[1])
+      .filter((id): id is string => id !== undefined)
+      .map(Number);
+
+    if (breaks.length > 0) {
+      result.set(sheetNum, breaks);
+    }
+  }
+
+  return result;
+}
+
 /** .xlsx ファイルをパースしてドメイン変換結果とデバッグ情報を返す */
 export async function parseExcelFile(file: File): Promise<FullParseResult> {
   const buffer = await file.arrayBuffer();
+
+  // ExcelJS のバグ回避: rowBreaks を zip から直接読み取る
+  const rowBreaksMap = await extractRowBreaksFromZip(buffer);
+
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
 
@@ -416,11 +461,16 @@ export async function parseExcelFile(file: File): Promise<FullParseResult> {
   const sheets: SheetParseOutput[] = [];
   let sheetIndex = 0;
 
-  workbook.eachSheet((ws) => {
+  workbook.eachSheet((ws, wsId) => {
     debugSheets.push(worksheetToDebugResult(ws));
 
     const rawData = worksheetToRawSheetData(ws);
-    const subPages = splitByRowBreaks(rawData);
+    // ExcelJS の ws.rowBreaks はバグで空になるため、zip から読み取った値で上書き
+    const rowBreaks = rowBreaksMap.get(wsId) ?? [];
+    const rawDataWithBreaks: RawSheetData =
+      rowBreaks.length > 0 ? { ...rawData, rowBreaks } : rawData;
+
+    const subPages = splitByRowBreaks(rawDataWithBreaks);
     const pages = subPages.map((sub) => parseSheet(sub));
 
     sheets.push({

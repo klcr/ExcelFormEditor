@@ -14,10 +14,18 @@ domain / web
 
 ## 詳細
 
-### ExcelJS の制約
-- `worksheet.rowBreaks` は行改ページの配列を返す（各要素は `{ id: number }` 形式）
+### ExcelJS v4.4.0 の rowBreaks パースバグ
+
+ExcelJS v4.4.0 には `rowBreaks` の読み取りに関するバグが3箇所存在する:
+
+1. **`PageBreaksXform.parseOpen`** が `node.attributes.ref` を参照するが、OOXML の `<brk>` 要素は `id` 属性を持つ。結果として各ブレーク要素が `null` にパースされる
+2. **`WorksheetXform.parseClose`** がモデル構築時に `rowBreaks` を含めない（414-429行目の `this.model = {...}` に未記載）
+3. **`Worksheet.set model`** が `value.rowBreaks` をプロパティに反映しない
+
+**ワークアラウンド**: JSZip（ExcelJS の間接依存）で xlsx の zip を直接解凍し、`xl/worksheets/sheetN.xml` 内の `<brk id="N">` を正規表現で読み取る。`extractRowBreaksFromZip()` 関数として `parseExcelFile.ts` に実装。
+
+### その他の制約
 - `worksheet.colBreaks` は ExcelJS に未実装（GitHub Issue #2304）
-- ExcelJS の型定義には `rowBreaks` が明示的に公開されていないため、型アサーションを使用
 
 ### マージセルが改ページ境界をまたぐ場合
 - 各ページの行範囲にクリップして分割する
