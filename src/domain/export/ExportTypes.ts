@@ -36,11 +36,27 @@ export type PaperInfo = {
   };
 };
 
-/** テンプレートマニフェスト */
+/** テンプレートマニフェスト（単一ページ） */
 export type TemplateManifest = {
   readonly templateId: string;
   readonly version: string;
   readonly paper: PaperInfo;
   readonly fields: readonly FieldMapping[];
+  readonly interface: string;
+};
+
+/** ページ単位のマニフェストエントリ */
+export type PageManifestEntry = {
+  readonly pageIndex: number;
+  readonly sheetName: string;
+  readonly paper: PaperInfo;
+  readonly fields: readonly FieldMapping[];
+};
+
+/** マルチページテンプレートマニフェスト */
+export type MultiPageTemplateManifest = {
+  readonly templateId: string;
+  readonly version: string;
+  readonly pages: readonly PageManifestEntry[];
   readonly interface: string;
 };

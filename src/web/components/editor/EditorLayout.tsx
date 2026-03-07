@@ -8,7 +8,7 @@ import { useKeyboardShortcuts } from '@web/hooks/useKeyboardShortcuts';
 import type { LayoutMode } from '@web/hooks/useLayoutMode';
 import { useSnap } from '@web/hooks/useSnap';
 import { downloadFile } from '@web/utils/downloadFile';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BottomSheet } from '../common/BottomSheet';
 import { MergeAction } from './BoxEditor/MergeAction';
 import { SplitAction } from './BoxEditor/SplitAction';
@@ -22,6 +22,7 @@ type EditorLayoutProps = {
   readonly paper: PaperDefinition | null;
   readonly layoutMode?: LayoutMode;
   readonly fileName?: string;
+  readonly onBoxesChange?: (boxes: readonly BoxDefinition[]) => void;
 };
 
 /**
@@ -35,11 +36,22 @@ export function EditorLayout({
   paper,
   layoutMode = 'desktop',
   fileName = 'template',
+  onBoxesChange,
 }: EditorLayoutProps) {
   const snap = useSnap();
   const { selectedBoxIds, boxes, isDragging, canUndo, canRedo, activeGuides, actions } =
     useBoxEditor(initialBoxes, { snap });
   const [isPropertySheetOpen, setIsPropertySheetOpen] = useState(false);
+
+  // Notify parent of box changes
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    onBoxesChange?.(boxes);
+  }, [boxes, onBoxesChange]);
 
   useKeyboardShortcuts({
     actions: {
