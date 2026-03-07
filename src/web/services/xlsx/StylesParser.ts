@@ -18,6 +18,7 @@ export function parseStyles(xml: string): ParsedStyles {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
+    removeNSPrefix: true,
     trimValues: false,
     isArray: (name) => ARRAY_TAGS.has(name),
   });

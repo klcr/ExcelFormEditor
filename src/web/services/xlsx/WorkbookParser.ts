@@ -11,6 +11,7 @@ export function parseWorkbook(workbookXml: string, relsXml: string): SheetInfo[]
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
+    removeNSPrefix: true,
     trimValues: false,
     isArray: (name) => ARRAY_TAGS.has(name),
   });
@@ -39,10 +40,12 @@ export function parseWorkbook(workbookXml: string, relsXml: string): SheetInfo[]
       const o = s as Record<string, unknown>;
       const name = String(o['@_name'] ?? '');
       const sheetId = Number(o['@_sheetId'] ?? 0);
-      const rId = String(o['@_r:id'] ?? '');
+      // removeNSPrefix strips r: prefix from r:id → id
+      const rId = String(o['@_id'] ?? o['@_r:id'] ?? '');
       const target = relMap.get(rId) ?? '';
-      // Target はワークブックからの相対パス。xl/ を付加
-      const path = target.startsWith('xl/') ? target : `xl/${target}`;
+      // Target はワークブックからの相対パス。xl/ を付加。絶対パスの場合は先頭 / を除去
+      const normalizedTarget = target.startsWith('/') ? target.slice(1) : target;
+      const path = normalizedTarget.startsWith('xl/') ? normalizedTarget : `xl/${normalizedTarget}`;
       return { name, sheetId, rId, path };
     })
     .filter((s) => s.name && s.path);
@@ -56,6 +59,7 @@ export function parsePrintAreas(workbookXml: string): ReadonlyMap<string, string
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
+    removeNSPrefix: true,
     trimValues: false,
     isArray: (name) => ARRAY_TAGS.has(name),
   });

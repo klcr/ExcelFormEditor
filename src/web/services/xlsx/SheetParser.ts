@@ -32,6 +32,7 @@ export function parseWorksheet(
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
+    removeNSPrefix: true,
     trimValues: false,
     isArray: (name) => ARRAY_TAGS.has(name),
   });

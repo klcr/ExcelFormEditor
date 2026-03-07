@@ -11,6 +11,7 @@ export function parseSharedStrings(xml: string): string[] {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
+    removeNSPrefix: true,
     trimValues: false,
     isArray: (name) => name === 'si' || name === 'r',
   });
