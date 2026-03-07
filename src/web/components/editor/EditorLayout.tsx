@@ -1,4 +1,5 @@
 import type { BoxDefinition } from '@domain/box';
+import { exportAsHtml } from '@domain/export';
 import type { LineDefinition } from '@domain/line';
 import type { PaperDefinition } from '@domain/paper';
 import { PAPER_DIMENSIONS } from '@domain/paper';
@@ -6,6 +7,7 @@ import { useBoxEditor } from '@web/hooks/useBoxEditor';
 import { useKeyboardShortcuts } from '@web/hooks/useKeyboardShortcuts';
 import type { LayoutMode } from '@web/hooks/useLayoutMode';
 import { useSnap } from '@web/hooks/useSnap';
+import { downloadFile } from '@web/utils/downloadFile';
 import { useState } from 'react';
 import { BottomSheet } from '../common/BottomSheet';
 import { MergeAction } from './BoxEditor/MergeAction';
@@ -19,6 +21,7 @@ type EditorLayoutProps = {
   readonly lines: readonly LineDefinition[];
   readonly paper: PaperDefinition | null;
   readonly layoutMode?: LayoutMode;
+  readonly fileName?: string;
 };
 
 /**
@@ -28,9 +31,10 @@ type EditorLayoutProps = {
  */
 export function EditorLayout({
   boxes: initialBoxes,
-  lines: _lines,
+  lines,
   paper,
   layoutMode = 'desktop',
+  fileName = 'template',
 }: EditorLayoutProps) {
   const snap = useSnap();
   const { selectedBoxIds, boxes, isDragging, canUndo, canRedo, activeGuides, actions } =
@@ -45,6 +49,20 @@ export function EditorLayout({
       deselectAll: actions.deselectAll,
     },
   });
+
+  const handleExport = () => {
+    if (!paper) return;
+    const templateId = fileName.replace(/\.[^.]+$/, '');
+    const html = exportAsHtml({
+      boxes,
+      lines,
+      variables: [],
+      paper,
+      templateId,
+      templateVersion: '1.0.0',
+    });
+    downloadFile(html, `${templateId}.html`, 'text/html');
+  };
 
   const paperWidth = paper
     ? paper.orientation === 'landscape'
@@ -103,6 +121,14 @@ export function EditorLayout({
           >
             ↪
           </button>
+          <button
+            type="button"
+            data-testid="export-button"
+            disabled={!paper}
+            onClick={handleExport}
+          >
+            Export
+          </button>
         </div>
         <div style={{ flex: 1 }}>
           <EditorCanvas
@@ -146,6 +172,7 @@ export function EditorLayout({
             boxes={boxes}
             onMove={actions.moveSelectedBoxes}
             onResize={actions.resizeBox}
+            onUpdateBox={actions.updateBox}
           />
           <CssPreview boxes={boxes} selectedBoxIds={selectedBoxIds} />
         </BottomSheet>
@@ -175,6 +202,9 @@ export function EditorLayout({
         <button type="button" data-testid="redo-button" disabled={!canRedo} onClick={actions.redo}>
           やり直す
         </button>
+        <button type="button" data-testid="export-button" disabled={!paper} onClick={handleExport}>
+          エクスポート
+        </button>
       </div>
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <div style={{ flex: 1 }}>
@@ -195,6 +225,7 @@ export function EditorLayout({
             boxes={boxes}
             onMove={actions.moveSelectedBoxes}
             onResize={actions.resizeBox}
+            onUpdateBox={actions.updateBox}
           />
           <CssPreview boxes={boxes} selectedBoxIds={selectedBoxIds} />
         </div>

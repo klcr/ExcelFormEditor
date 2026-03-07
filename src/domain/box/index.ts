@@ -6,6 +6,7 @@ export type {
   BoxDefinition,
   BoxFill,
   BoxFont,
+  BoxPadding,
   HorizontalAlignment,
   VerticalAlignment,
 } from './BoxTypes';

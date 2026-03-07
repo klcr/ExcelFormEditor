@@ -18,15 +18,41 @@ describe('PropertyPanel', () => {
     expect(screen.getByText('ボックスを選択してください')).toBeInTheDocument();
   });
 
-  it('shows PositionSizeSection when 1 box is selected', () => {
+  it('shows all sections when 1 box is selected', () => {
     const box = makeBox();
     render(
-      <PropertyPanel selectedBoxIds={['box-1']} boxes={[box]} onMove={noop} onResize={noop} />,
+      <PropertyPanel
+        selectedBoxIds={['box-1']}
+        boxes={[box]}
+        onMove={noop}
+        onResize={noop}
+        onUpdateBox={noop}
+      />,
     );
     expect(screen.getByLabelText('X位置')).toBeInTheDocument();
     expect(screen.getByLabelText('Y位置')).toBeInTheDocument();
     expect(screen.getByLabelText('幅')).toBeInTheDocument();
     expect(screen.getByLabelText('高さ')).toBeInTheDocument();
+    expect(screen.getByText('罫線')).toBeInTheDocument();
+    expect(screen.getByText('テキストスタイル')).toBeInTheDocument();
+    expect(screen.getByText('塗りつぶし')).toBeInTheDocument();
+  });
+
+  it('shows variable binding section when callbacks are provided', () => {
+    const box = makeBox();
+    render(
+      <PropertyPanel
+        selectedBoxIds={['box-1']}
+        boxes={[box]}
+        onMove={noop}
+        onResize={noop}
+        onUpdateBox={noop}
+        variables={[]}
+        onAddVariable={noop}
+        onRemoveVariable={noop}
+      />,
+    );
+    expect(screen.getByText('変数バインディング')).toBeInTheDocument();
   });
 
   it('shows multi-select message when 2+ boxes are selected', () => {

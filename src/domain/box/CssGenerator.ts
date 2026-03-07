@@ -130,6 +130,16 @@ export function generateBoxCss(box: BoxDefinition): string {
     lines.push('word-wrap: break-word;');
   }
 
+  // Padding
+  if (box.padding) {
+    const { top, right, bottom, left } = box.padding;
+    if (top === right && right === bottom && bottom === left) {
+      lines.push(`padding: ${top}mm;`);
+    } else {
+      lines.push(`padding: ${top}mm ${right}mm ${bottom}mm ${left}mm;`);
+    }
+  }
+
   lines.push('box-sizing: border-box;');
 
   return lines.join('\n');

@@ -29,6 +29,7 @@ type BoxEditorActions = {
   readonly toggleBoxSelection: (id: string) => void;
   readonly moveSelectedBoxes: (delta: Position) => void;
   readonly resizeBox: (id: string, newSize: Size) => void;
+  readonly updateBox: (id: string, partial: Partial<BoxDefinition>) => void;
   readonly setBoxes: (boxes: readonly BoxDefinition[]) => void;
   readonly setDragging: (isDragging: boolean) => void;
   readonly undo: () => void;
@@ -129,6 +130,18 @@ export function useBoxEditor(
     [boxes, pushBoxes, snap],
   );
 
+  const updateBox = useCallback(
+    (id: string, partial: Partial<BoxDefinition>) => {
+      pushBoxes(
+        boxes.map((box) => {
+          if (box.id !== id) return box;
+          return { ...box, ...partial, id: box.id };
+        }),
+      );
+    },
+    [boxes, pushBoxes],
+  );
+
   const setBoxesAction = useCallback(
     (newBoxes: readonly BoxDefinition[]) => {
       resetBoxes(newBoxes);
@@ -202,6 +215,7 @@ export function useBoxEditor(
       toggleBoxSelection,
       moveSelectedBoxes,
       resizeBox,
+      updateBox,
       setBoxes: setBoxesAction,
       setDragging: setDraggingAction,
       undo,
