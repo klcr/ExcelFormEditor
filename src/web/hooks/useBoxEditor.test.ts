@@ -103,6 +103,43 @@ describe('useBoxEditor', () => {
     expect(result.current.canUndo).toBe(false);
   });
 
+  // --- updateBox ---
+
+  it('updateBox updates properties of a specific box', () => {
+    const { result } = renderHook(() => useBoxEditor([makeBox('b1'), makeBox('b2')]));
+
+    act(() =>
+      result.current.actions.updateBox('b1', {
+        font: { name: 'Arial', sizePt: 12, bold: true, italic: false, color: '#ff0000' },
+      }),
+    );
+
+    const b1 = result.current.boxes.find((b) => b.id === 'b1');
+    expect(b1?.font.name).toBe('Arial');
+    expect(b1?.font.bold).toBe(true);
+    expect(b1?.font.color).toBe('#ff0000');
+  });
+
+  it('updateBox preserves box id even if partial includes id', () => {
+    const { result } = renderHook(() => useBoxEditor([makeBox('b1')]));
+
+    act(() => result.current.actions.updateBox('b1', { id: 'hacked', content: 'hello' }));
+
+    expect(result.current.boxes[0]?.id).toBe('b1');
+    expect(result.current.boxes[0]?.content).toBe('hello');
+  });
+
+  it('updateBox supports undo', () => {
+    const { result } = renderHook(() => useBoxEditor([makeBox('b1')]));
+
+    const originalContent = result.current.boxes[0]?.content;
+    act(() => result.current.actions.updateBox('b1', { content: 'changed' }));
+    expect(result.current.boxes[0]?.content).toBe('changed');
+
+    act(() => result.current.actions.undo());
+    expect(result.current.boxes[0]?.content).toBe(originalContent);
+  });
+
   // --- Undo/Redo ---
 
   it('undo reverts the last box mutation', () => {

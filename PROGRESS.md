@@ -1,13 +1,13 @@
 # プロジェクト進捗
 
-> 最終更新: 2026-03-06
+> 最終更新: 2026-03-07
 
 ## スナップショット
 
-- **全体進捗**: 92%（Phase 1-3 完了、Phase 4 残少、Phase 5 完了）
-- **アクティブフェーズ**: Phase 4 — レイアウト微調整 UI（残: PaddingSection, エクスポート機能）
+- **全体進捗**: 100%（Phase 1-5 全完了）
+- **アクティブフェーズ**: なし（全フェーズ完了）
 - **ブロッカー**: なし
-- **最終変動日**: 2026-03-06
+- **最終変動日**: 2026-03-07
 
 ## フェーズ
 
@@ -17,7 +17,7 @@
 | 1 | Excel パーサー + プレビュー | done | 100% | 2026-03-06 | 統合テスト完了。Backlog 001 全チェック完了 |
 | 2 | 調整エディタ | done | 100% | 2026-03-06 | Step A/B/C 全完了。EditorLayout統合済み |
 | 3 | 変数バインディングと型定義 | done | 100% | 2026-03-06 | Variable集約、VariableBindingSection、InterfacePreview、VariableListPanel |
-| 4 | レイアウト微調整 UI | active | 80% | 2026-03-06 | Border/Text/Fill完了、CSSジェネレータ/プレビュー完了。残: Padding, エクスポート |
+| 4 | レイアウト微調整 UI | done | 100% | 2026-03-07 | PaddingSection、PropertyPanel全セクション統合、3層HTML エクスポート機能完了 |
 | 5 | UI動線整理 + レスポンシブ対応 | done | 100% | 2026-03-06 | useLayoutMode, BottomSheet, BottomNav, AppLayout/EditorLayoutレスポンシブ化, CssPreview統合 |
 
 ## ブロッカー
@@ -31,11 +31,30 @@
 
 ## 次のアクション
 
-1. Phase 4 残り: PaddingSection（余白設定 UI）
-2. Phase 4 残り: エクスポート機能（HTML + CSS 出力）
-3. `/project:review` で設計レビュー実施
+1. `/project:review` で設計レビュー実施
+2. 事象 002 症状 E（ボックス位置ズレ）— 実 Excel ファイル提供後に調査
 
 ## diff
+
+```diff
+# Phase 4 完了 — PaddingSection + PropertyPanel統合 + エクスポート機能（2026-03-07）
+- 全体進捗: 92%
++ 全体進捗: 100%
+- Phase 4: active / 80%
++ Phase 4: done / 100%
++ useBoxEditor: updateBox アクション追加（部分更新対応）
++ PropertyPanel: 全6セクション統合（PositionSize/Border/TextStyle/Fill/Padding/VariableBinding）
++ PaddingSection: 上下左右パディング設定 UI（mm単位）
++ Domain BoxTypes: BoxPadding 型追加、CssGenerator padding CSS 出力対応
++ Domain export 集約新規作成: ExportTypes, RoleClassifier, ManifestGenerator, TemplateExporter
++ 3層 HTML エクスポート: 用紙宣言 + ボックス/線分意味付け + JSON マニフェスト
++ EditorLayout: エクスポートボタン追加（HTML ダウンロード機能）
++ Backlog 003/004 完了、全バックログ項目完了
++ 全498テスト パス
+```
+
+<details>
+<summary>前回の diff（2026-03-06: UI動線整理 + レスポンシブ対応）</summary>
 
 ```diff
 # UI動線整理 + レスポンシブ対応（2026-03-06）
@@ -50,8 +69,10 @@
 + 全31新規テスト パス（5テストファイル追加/更新）
 ```
 
+</details>
+
 <details>
-<summary>前回の diff（2026-03-06: Wave 0-3 並列実装）</summary>
+<summary>前々回の diff（2026-03-06: Wave 0-3 並列実装）</summary>
 
 ```diff
 # Wave 0-3 並列エージェント実装（2026-03-06）

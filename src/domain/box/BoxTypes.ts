@@ -44,6 +44,14 @@ export type BoxAlignment = {
   readonly wrapText: boolean;
 };
 
+/** 余白（mm 単位） */
+export type BoxPadding = {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+};
+
 /** ボックスエンティティ */
 export type BoxDefinition = {
   readonly id: string;
@@ -53,4 +61,5 @@ export type BoxDefinition = {
   readonly font: BoxFont;
   readonly fill?: BoxFill;
   readonly alignment: BoxAlignment;
+  readonly padding?: BoxPadding;
 };

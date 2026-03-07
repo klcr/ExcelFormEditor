@@ -1,10 +1,10 @@
 # 003-フロントエンド: 変数バインディング UI
 
 ## 状態
-未着手
+完了
 
 ## 担当
-未定
+Claude
 
 ## 対象パッケージ
 web
@@ -20,18 +20,18 @@ Phase 3 に対応するフロントエンド実装。
 この変数情報から TypeScript の interface を自動生成し、型安全にテンプレートを利用できるようにする。
 
 ## 前提条件チェックリスト
-- [ ] 002-frontend-adjustment-editor が完了（Step A まで）
-- [ ] `src/domain/box/` — 変数定義・型定義ロジック
+- [x] 002-frontend-adjustment-editor が完了（Step A まで）
+- [x] `src/domain/box/` — 変数定義・型定義ロジック
 
 ## 実装チェックリスト
-- [ ] PropertyPanel に変数バインディングセクションを追加
-- [ ] 変数名入力フィールド（`{{variableName}}` 形式）
-- [ ] 変数の型選択（string / number / date / boolean）
-- [ ] 変数一覧表示（全ボックスに定義された変数の一覧）
-- [ ] TypeScript interface プレビュー表示
-- [ ] interface コードのコピー・ダウンロード機能
-- [ ] 変数名の重複チェック・バリデーション
-- [ ] テスト作成
+- [x] PropertyPanel に変数バインディングセクションを追加
+- [x] 変数名入力フィールド（`{{variableName}}` 形式）
+- [x] 変数の型選択（string / number / date / boolean）
+- [x] 変数一覧表示（全ボックスに定義された変数の一覧）
+- [x] TypeScript interface プレビュー表示
+- [x] interface コードのコピー・ダウンロード機能
+- [x] 変数名の重複チェック・バリデーション
+- [x] テスト作成
 
 ## 備考
 

@@ -139,6 +139,39 @@ describe('generateBoxCss', () => {
     expect(css).toContain('background-color: #00FF00;');
   });
 
+  it('paddingが設定されている場合にCSS paddingを出力する', () => {
+    const box = createBox({
+      id: 'test-padding',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      padding: { top: 2, right: 3, bottom: 4, left: 5 },
+    });
+
+    const css = generateBoxCss(box);
+    expect(css).toContain('padding: 2mm 3mm 4mm 5mm;');
+  });
+
+  it('padding全辺同値の場合はショートハンドで出力する', () => {
+    const box = createBox({
+      id: 'test-padding-uniform',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      padding: { top: 1, right: 1, bottom: 1, left: 1 },
+    });
+
+    const css = generateBoxCss(box);
+    expect(css).toContain('padding: 1mm;');
+    expect(css).not.toContain('padding: 1mm 1mm 1mm 1mm;');
+  });
+
+  it('paddingが未設定の場合はCSS paddingを出力しない', () => {
+    const box = createBox({
+      id: 'test-no-padding',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+    });
+
+    const css = generateBoxCss(box);
+    expect(css).not.toContain('padding:');
+  });
+
   it('垂直配置が正しくマッピングされる', () => {
     const alignments = [
       { vertical: 'top' as const, expected: 'flex-start' },

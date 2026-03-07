@@ -1,5 +1,12 @@
 import type { Rect } from '@domain/shared';
-import type { BoxAlignment, BoxBorder, BoxDefinition, BoxFill, BoxFont } from './BoxTypes';
+import type {
+  BoxAlignment,
+  BoxBorder,
+  BoxDefinition,
+  BoxFill,
+  BoxFont,
+  BoxPadding,
+} from './BoxTypes';
 
 /** デフォルトフォント（Calibri 11pt, 黒） */
 export const DEFAULT_FONT: BoxFont = {
@@ -26,6 +33,7 @@ export type CreateBoxParams = {
   readonly font?: Partial<BoxFont>;
   readonly fill?: BoxFill;
   readonly alignment?: Partial<BoxAlignment>;
+  readonly padding?: BoxPadding;
 };
 
 let boxCounter = 0;
@@ -57,6 +65,7 @@ export function createBox(params: CreateBoxParams): BoxDefinition {
       ...DEFAULT_ALIGNMENT,
       ...stripUndefined(params.alignment ?? {}),
     },
+    padding: params.padding,
   };
 }
 
