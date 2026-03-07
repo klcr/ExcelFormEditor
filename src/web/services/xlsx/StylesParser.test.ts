@@ -84,6 +84,7 @@ describe('parseStyles', () => {
       fontId: 1,
       fillId: 2,
       borderId: 1,
+      numFmtId: 0,
       applyFont: true,
       applyFill: true,
       applyBorder: true,
@@ -99,6 +100,121 @@ describe('parseStyles', () => {
     expect(styles.fills).toEqual([]);
     expect(styles.borders).toEqual([]);
     expect(styles.cellXfs).toEqual([]);
+  });
+
+  it('テーマカラーを解決する', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="1">
+    <font><sz val="11"/><name val="Arial"/><color theme="1"/></font>
+  </fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/></border></borders>
+  <cellXfs count="1"><xf fontId="0" fillId="0" borderId="0"/></cellXfs>
+</styleSheet>`;
+    const palette = [
+      'FFFFFF',
+      '000000',
+      'E7E6E6',
+      '44546A',
+      '4472C4',
+      'ED7D31',
+      'A5A5A5',
+      'FFC000',
+      '5B9BD5',
+      '70AD47',
+      '0563C1',
+      '954F72',
+    ];
+    const styles = parseStyles(xml, palette);
+    expect(styles.fonts[0]?.color).toBe('000000');
+  });
+
+  it('テーマカラー + tint を解決する', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="1">
+    <font><sz val="11"/><name val="Arial"/><color theme="0" tint="-0.5"/></font>
+  </fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/></border></borders>
+  <cellXfs count="1"><xf fontId="0" fillId="0" borderId="0"/></cellXfs>
+</styleSheet>`;
+    const palette = [
+      'FFFFFF',
+      '000000',
+      'E7E6E6',
+      '44546A',
+      '4472C4',
+      'ED7D31',
+      'A5A5A5',
+      'FFC000',
+      '5B9BD5',
+      '70AD47',
+      '0563C1',
+      '954F72',
+    ];
+    const styles = parseStyles(xml, palette);
+    // FFFFFF with tint=-0.5 → lum: 1 * (1 + (-0.5)) = 0.5 → gray
+    expect(styles.fonts[0]?.color).toBeDefined();
+    expect(styles.fonts[0]?.color).not.toBe('FFFFFF');
+  });
+
+  it('インデックスカラーを解決する', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="1">
+    <font><sz val="11"/><name val="Arial"/><color indexed="2"/></font>
+  </fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/></border></borders>
+  <cellXfs count="1"><xf fontId="0" fillId="0" borderId="0"/></cellXfs>
+</styleSheet>`;
+    const styles = parseStyles(xml);
+    expect(styles.fonts[0]?.color).toBe('FF0000'); // indexed 2 = red
+  });
+
+  it('テーマパレット未指定時はテーマカラーを無視する', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="1">
+    <font><sz val="11"/><name val="Arial"/><color theme="4"/></font>
+  </fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/></border></borders>
+  <cellXfs count="1"><xf fontId="0" fillId="0" borderId="0"/></cellXfs>
+</styleSheet>`;
+    const styles = parseStyles(xml);
+    expect(styles.fonts[0]?.color).toBeUndefined();
+  });
+
+  it('numFmts をパースする', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="2">
+    <numFmt numFmtId="164" formatCode="yyyy/mm/dd"/>
+    <numFmt numFmtId="165" formatCode="#,##0.00"/>
+  </numFmts>
+  <fonts count="1"><font><sz val="11"/><name val="Arial"/></font></fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/></border></borders>
+  <cellXfs count="1"><xf fontId="0" fillId="0" borderId="0"/></cellXfs>
+</styleSheet>`;
+    const styles = parseStyles(xml);
+    expect(styles.numFmts.get(164)).toBe('yyyy/mm/dd');
+    expect(styles.numFmts.get(165)).toBe('#,##0.00');
+  });
+
+  it('numFmtId を cellXfs から抽出する', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="1"><font><sz val="11"/><name val="Arial"/></font></fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/></border></borders>
+  <cellXfs count="1"><xf fontId="0" fillId="0" borderId="0" numFmtId="14"/></cellXfs>
+</styleSheet>`;
+    const styles = parseStyles(xml);
+    expect(styles.cellXfs[0]?.numFmtId).toBe(14);
   });
 });
 

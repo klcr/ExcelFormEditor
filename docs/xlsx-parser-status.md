@@ -31,9 +31,12 @@ SVG プレビュー / CSS 出力
 | `XlsxReader.ts` | エントリポイント: zip 展開→各パーサー呼び出し→`RawSheetData[]` 返却 | — |
 | `WorkbookParser.ts` | シート名・シートパス・定義名（印刷領域） | `xl/workbook.xml`, `xl/_rels/workbook.xml.rels` |
 | `SharedStringsParser.ts` | 共有文字列テーブル | `xl/sharedStrings.xml` |
-| `StylesParser.ts` | フォント・塗り・罫線・配置の解決 | `xl/styles.xml` |
-| `SheetParser.ts` | セル・結合・行高・列幅・改ページ・ページ設定・余白 | `xl/worksheets/sheetN.xml` |
-| `CellValueResolver.ts` | セル値の型解決（共有文字列/数値/真偽値/数式キャッシュ） | — |
+| `StylesParser.ts` | フォント・塗り・罫線・配置・numFmts の解決 | `xl/styles.xml` |
+| `ThemeParser.ts` | テーマカラーパレット抽出・tint 計算 | `xl/theme/theme1.xml` |
+| `IndexedColors.ts` | OOXML 標準 64 色インデックスカラーテーブル | — |
+| `NumFmtResolver.ts` | 数値フォーマット解決（日付・パーセント・桁区切り） | — |
+| `SheetParser.ts` | セル・結合・行高・列幅・改ページ・ページ設定・余白・非表示行列 | `xl/worksheets/sheetN.xml` |
+| `CellValueResolver.ts` | セル値の型解決（共有文字列/数値/真偽値/数式キャッシュ/numFmt適用） | — |
 
 ---
 
@@ -59,7 +62,7 @@ SVG プレビュー / CSS 出力
 | フォントサイズ | ✅ | `<sz val="...">` (pt) |
 | 太字 | ✅ | `<b>` 要素の有無 |
 | イタリック | ✅ | `<i>` 要素の有無 |
-| フォント色（RGB直指定） | ✅ | `<color rgb="AARRGGBB">` → `RRGGBB` に変換 |
+| フォント色（RGB/テーマ/インデックス） | ✅ | RGB 直指定 + テーマカラー（tint 対応）+ インデックスカラー |
 | 罫線（4辺） | ✅ | top/bottom/left/right の style + color |
 | 罫線スタイル | ✅ | thin/medium/thick/dotted/dashed/double/hair |
 | 背景色（単色塗り） | ✅ | `patternType="solid"` の fgColor |
@@ -96,45 +99,32 @@ SVG プレビュー / CSS 出力
 
 ---
 
+## 実装済み要素（バックログ完了分）
+
+### テーマカラー / インデックスカラー ✅
+
+- `ThemeParser.ts`: `xl/theme/theme1.xml` から 12 色のテーマカラーパレットを抽出
+- `IndexedColors.ts`: OOXML 標準 64 色インデックスカラーテーブル
+- `StylesParser.ts`: `extractColor()` を拡張し `theme` + `tint` + `indexed` を解決
+- `XlsxReader.ts`: テーマ XML の読み込みとパレット注入
+
+### 数値フォーマット（numFmt） ✅
+
+- `NumFmtResolver.ts`: 組み込みフォーマット ID (0-49) + カスタム numFmt による値変換
+- 日付（Excel シリアル値 → `yyyy/mm/dd`）、パーセント、桁区切りに対応
+- `CellValueResolver.ts`: `numFmtId` に基づくフォーマット自動適用
+- 1900/2/29 バグ補正済み
+
+### 非表示行・列 ✅
+
+- `SheetParser.ts`: `hidden="1"` 属性を検出し高さ/幅を 0 に設定
+- `ExcelParser.ts`: 幅 0 / 高さ 0 のセルからのボックス生成をスキップ
+
+---
+
 ## 不足要素（優先度順）
 
-### P1: 高優先（帳票の見た目に大きく影響）
-
-#### テーマカラー / インデックスカラー
-
-- **現状**: RGB 直指定（`<color rgb="AARRGGBB">`）のみ対応。テーマカラー（`<color theme="N">`）とインデックスカラー（`<color indexed="N">`）は無視される
-- **影響**: 実際の帳票の 30%以上がテーマカラーを使用。特に「黒」がテーマカラーで指定されている場合、フォント色が欠落しデフォルト黒にフォールバックするが、罫線色が欠落すると罫線が表示されない
-- **対応方針**:
-  1. `xl/theme/theme1.xml` をパースしてカラーパレットを構築
-  2. テーマインデックス → RGB 変換テーブルを作成
-  3. `tint` 属性による明度調整を実装
-  4. インデックスカラーは OOXML 標準の 64 色テーブルをハードコード
-- **対象ファイル**: `StylesParser.ts`（`extractColor()` 関数の拡張）、新規 `ThemeParser.ts`
-- **工数目安**: 中規模（テーマ XML のパース + tint 計算）
-
 ### P2: 中優先（特定の帳票で問題になる）
-
-#### 数値フォーマット（numFmt）
-
-- **現状**: `numFmtId` は cellXfs に存在するが未使用。セル値は `<v>` の生値をそのまま表示
-- **影響**: 日付が Excel シリアル値（例: `45000`）で表示される。通貨・パーセントの書式が反映されない
-- **対応方針**:
-  1. `<numFmts>` テーブルをパースしてフォーマット文字列を取得
-  2. 組み込みフォーマット ID（0-49）のマッピングテーブルを用意
-  3. 日付判定: フォーマット文字列に `y`, `m`, `d`, `h`, `s` が含まれるか
-  4. `CellValueResolver` で numFmtId に基づくフォーマット適用
-- **対象ファイル**: `StylesParser.ts`、`CellValueResolver.ts`
-- **備考**: 完全なフォーマット再現は不要。日付・パーセント・通貨の 3 パターンをカバーすれば 80% 対応
-
-#### 非表示行・列
-
-- **現状**: `<row hidden="1">` および `<col hidden="1">` を無視
-- **影響**: 非表示行/列がボックスとして生成され、レイアウトが崩れる
-- **対応方針**:
-  1. `SheetParser` で `hidden` 属性を読み取り
-  2. 非表示行の高さを 0、非表示列の幅を 0 として扱う
-  3. または `RawSheetData` に `hiddenRows`/`hiddenCols` を追加して ExcelParser 側で除外
-- **対象ファイル**: `SheetParser.ts`、`ExcelParser.ts`
 
 #### テキスト回転
 
@@ -254,16 +244,18 @@ ThemeColorPalette: Record<number, string>  // theme index → RGB hex
 
 | テストファイル | テスト数 | カバー範囲 |
 |--------------|---------|-----------|
-| `StylesParser.test.ts` | 9 | フォント・罫線・塗り・配置の解決 |
-| `SheetParser.test.ts` | 19 | セル・結合・行高・列幅・改ページ・ページ設定 |
+| `StylesParser.test.ts` | 15 | フォント・罫線・塗り・配置・テーマカラー・インデックスカラー・numFmts |
+| `ThemeParser.test.ts` | 9 | テーマカラーパレット抽出・applyTint |
+| `NumFmtResolver.test.ts` | 20 | 日付フォーマット・パーセント・桁区切り・excelSerialToDate |
+| `SheetParser.test.ts` | 21 | セル・結合・行高・列幅・改ページ・ページ設定・非表示行列 |
 | `SharedStringsParser.test.ts` | 8 | 共有文字列・リッチテキスト |
 | `WorkbookParser.test.ts` | 4 | シート名・定義名 |
 | `CellValueResolver.test.ts` | 16 | セル値の型解決 |
 | `XlsxReader.test.ts` | 11 | E2E: xlsx バッファ→RawSheetData |
 | `MultiPageE2E.test.ts` | 4 | 改ページ付き xlsx の E2E |
-| `ExcelParser.test.ts` | 71 | RawSheetData→BoxDefinition 変換 |
+| `ExcelParser.test.ts` | 77 | RawSheetData→BoxDefinition 変換・非表示行列スキップ |
 
-合計: **142 テスト**（パーサー関連のみ）
+合計: **185 テスト**（パーサー関連のみ）
 
 ---
 

@@ -31,6 +31,7 @@ export type XfEntry = {
   readonly fontId: number;
   readonly fillId: number;
   readonly borderId: number;
+  readonly numFmtId: number;
   readonly applyFont?: boolean;
   readonly applyFill?: boolean;
   readonly applyBorder?: boolean;
@@ -48,7 +49,11 @@ export type ParsedStyles = {
   readonly fills: readonly FillEntry[];
   readonly borders: readonly BorderEntry[];
   readonly cellXfs: readonly XfEntry[];
+  readonly numFmts: ReadonlyMap<number, string>;
 };
+
+/** テーマカラーパレット（xl/theme/theme1.xml から抽出、index 0-11） */
+export type ThemeColorPalette = readonly string[];
 
 /** シート情報（workbook.xml + .rels から取得） */
 export type SheetInfo = {

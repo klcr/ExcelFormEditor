@@ -320,3 +320,38 @@ describe('parseWorksheet', () => {
     expect(result.cells).toHaveLength(4);
   });
 });
+
+// --- 非表示行列テスト ---
+
+describe('hidden rows and columns', () => {
+  it('非表示行の高さを 0 として返す', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData>
+        <row r="1" ht="20"><c r="A1"><v>1</v></c></row>
+        <row r="2" ht="20" hidden="1"><c r="A2"><v>2</v></c></row>
+        <row r="3" ht="20"><c r="A3"><v>3</v></c></row>
+      </sheetData>
+    </worksheet>`;
+    const result = parseWorksheet(xml, [], null);
+    expect(result.rowHeights[0]).toBe(20);
+    expect(result.rowHeights[1]).toBe(0); // 非表示
+    expect(result.rowHeights[2]).toBe(20);
+  });
+
+  it('非表示列の幅を 0 として返す', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <cols>
+        <col min="1" max="1" width="10"/>
+        <col min="2" max="2" width="10" hidden="1"/>
+        <col min="3" max="3" width="10"/>
+      </cols>
+      <sheetData>
+        <row r="1"><c r="A1"><v>1</v></c></row>
+      </sheetData>
+    </worksheet>`;
+    const result = parseWorksheet(xml, [], null);
+    expect(result.columnWidths[0]).toBe(10);
+    expect(result.columnWidths[1]).toBe(0); // 非表示
+    expect(result.columnWidths[2]).toBe(10);
+  });
+});

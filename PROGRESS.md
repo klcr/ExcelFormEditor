@@ -32,15 +32,30 @@
 
 ## 次のアクション
 
-1. **Backlog 005: テーマカラー対応**（P1 最優先）— 帳票の色再現に最も影響が大きい
-2. **Backlog 006: 数値フォーマット対応**（P2）— 日付・通貨・パーセントの表示
-3. **Backlog 007: 非表示行・列の対応**（P2）— レイアウト崩れ防止
-4. 事象 002 症状 E（ボックス位置ズレ）— 実 Excel ファイル提供後に調査
-5. `/project:review` で設計レビュー実施
+1. 事象 002 症状 E（ボックス位置ズレ）— 実 Excel ファイル提供後に調査
+2. `/project:review` で設計レビュー実施
+3. P2 残: テキスト回転対応（Backlog 未作成）
+4. P3: 下線/取り消し線、インデント等（エディタで手動調整可能）
 
 詳細な実装指針と不足要素の分析は `docs/xlsx-parser-status.md` を参照。
 
 ## diff
+
+```diff
+# Backlog 005/006/007 実装完了（2026-03-07）
++ feat(web): ThemeParser — xl/theme/theme1.xml から 12 色テーマカラーパレット抽出
++ feat(web): IndexedColors — OOXML 標準 64 色インデックスカラーテーブル
++ feat(web): StylesParser.extractColor() — theme + tint + indexed カラー解決
++ feat(web): NumFmtResolver — 日付/パーセント/桁区切りの数値フォーマット変換
++ feat(web): CellValueResolver — numFmtId に基づく自動フォーマット適用
++ feat(web): SheetParser — hidden 行/列の検出（高さ/幅 0）
++ feat(domain): ExcelParser — 幅/高さ 0 のボックス生成スキップ
++ Backlog 005 (テーマカラー), 006 (数値フォーマット), 007 (非表示行列) 完了
++ 全605テスト パス — build + check-all 通過（新規 43 テスト追加）
+```
+
+<details>
+<summary>前回の diff（2026-03-07: 軽量パーサー品質改善）</summary>
 
 ```diff
 # 軽量 XLSX パーサー品質改善 + ドキュメント整備（2026-03-07）
@@ -53,8 +68,10 @@
 + 全562テスト パス — build + check-all 通過
 ```
 
+</details>
+
 <details>
-<summary>前回の diff（2026-03-07: マルチシート対応）</summary>
+<summary>前々回の diff（2026-03-07: マルチシート対応）</summary>
 
 ```diff
 # マルチシート対応（2026-03-07）

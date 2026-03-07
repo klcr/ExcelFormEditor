@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { parseSharedStrings } from './SharedStringsParser';
 import { parseWorksheet } from './SheetParser';
 import { parseStyles } from './StylesParser';
+import { parseThemeColors } from './ThemeParser';
 import { parsePrintAreas, parseWorkbook } from './WorkbookParser';
 
 /**
@@ -16,9 +17,12 @@ export async function readXlsx(buffer: ArrayBuffer): Promise<RawSheetData[]> {
   const ssXml = await readEntry(zip, 'xl/sharedStrings.xml');
   const sharedStrings = ssXml ? parseSharedStrings(ssXml) : [];
 
-  // 2. スタイル
+  // 2. テーマカラー + スタイル
+  const themeXml = await readEntry(zip, 'xl/theme/theme1.xml');
+  const themePalette = themeXml ? parseThemeColors(themeXml) : undefined;
+
   const stylesXml = await readEntry(zip, 'xl/styles.xml');
-  const styles = stylesXml ? parseStyles(stylesXml) : null;
+  const styles = stylesXml ? parseStyles(stylesXml, themePalette) : null;
 
   // 3. ワークブック + リレーションシップ → シート一覧
   const wbXml = await readEntry(zip, 'xl/workbook.xml');
