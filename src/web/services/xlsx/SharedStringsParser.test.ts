@@ -54,6 +54,14 @@ describe('parseSharedStrings', () => {
     expect(parseSharedStrings(xml)).toEqual(['only one']);
   });
 
+  it('数値文字参照（&#NNN;）をデコードする', () => {
+    const xml = `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <si><t>&#9675;&#9675;&#12471;&#12473;&#12486;&#12512;</t></si>
+      <si><t>&#25215;&#35469;&#27396;</t></si>
+    </sst>`;
+    expect(parseSharedStrings(xml)).toEqual(['○○システム', '承認欄']);
+  });
+
   it('空の sst を処理する', () => {
     const xml = `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>`;
     expect(parseSharedStrings(xml)).toEqual([]);

@@ -33,6 +33,7 @@ export function parseWorksheet(
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     removeNSPrefix: true,
+    htmlEntities: true,
     trimValues: false,
     isArray: (name) => ARRAY_TAGS.has(name),
   });

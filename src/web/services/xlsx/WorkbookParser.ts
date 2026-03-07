@@ -12,6 +12,7 @@ export function parseWorkbook(workbookXml: string, relsXml: string): SheetInfo[]
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     removeNSPrefix: true,
+    htmlEntities: true,
     trimValues: false,
     isArray: (name) => ARRAY_TAGS.has(name),
   });
@@ -60,6 +61,7 @@ export function parsePrintAreas(workbookXml: string): ReadonlyMap<string, string
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     removeNSPrefix: true,
+    htmlEntities: true,
     trimValues: false,
     isArray: (name) => ARRAY_TAGS.has(name),
   });

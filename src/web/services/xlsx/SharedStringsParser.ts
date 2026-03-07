@@ -12,6 +12,7 @@ export function parseSharedStrings(xml: string): string[] {
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     removeNSPrefix: true,
+    htmlEntities: true,
     trimValues: false,
     isArray: (name) => name === 'si' || name === 'r',
   });

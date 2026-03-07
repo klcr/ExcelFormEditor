@@ -19,6 +19,7 @@ export function parseStyles(xml: string): ParsedStyles {
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     removeNSPrefix: true,
+    htmlEntities: true,
     trimValues: false,
     isArray: (name) => ARRAY_TAGS.has(name),
   });
