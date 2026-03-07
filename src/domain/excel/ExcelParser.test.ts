@@ -555,6 +555,25 @@ describe('parseSheet', () => {
     expect(result.boxes[0]?.alignment.wrapText).toBe(true);
   });
 
+  it('OOXML の vertical="center" を "middle" にマッピングする', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        cells: [
+          createCell({
+            address: 'A1',
+            row: 1,
+            col: 1,
+            value: 'centered',
+            style: { alignment: { horizontal: 'center', vertical: 'center' } },
+          }),
+        ],
+      }),
+    );
+
+    expect(result.boxes[0]?.alignment.vertical).toBe('middle');
+    expect(result.boxes[0]?.alignment.horizontal).toBe('center');
+  });
+
   it('scale 80% でボックスの座標が縮小される', () => {
     const sheet100 = createMinimalSheet({
       pageSetup: { paperSize: 9, orientation: 'portrait', scale: 100 },

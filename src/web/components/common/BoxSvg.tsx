@@ -36,6 +36,29 @@ function wrapText(text: string, maxWidth: number, fontSize: number): string[] {
 }
 
 /**
+ * テキストを行分割する。
+ * \n による明示的改行は常に尊重し、wrapText が true の場合はさらに幅で折り返す。
+ */
+function splitTextLines(
+  text: string,
+  shouldWrap: boolean,
+  maxWidth: number,
+  fontSize: number,
+): string[] {
+  // まず明示的改行で分割
+  const explicitLines = text.split('\n');
+
+  if (!shouldWrap) return explicitLines;
+
+  // wrapText が有効な場合、各行をさらに幅で折り返す
+  const result: string[] = [];
+  for (const line of explicitLines) {
+    result.push(...wrapText(line, maxWidth, fontSize));
+  }
+  return result;
+}
+
+/**
  * ボックスの視覚的な内容（塗りつぶし、罫線、テキスト）を SVG で描画する。
  * プレビューモードとエディタモードの両方で共通利用される。
  */
@@ -46,13 +69,10 @@ export function BoxSvg({ box }: { readonly box: BoxDefinition }) {
 
   const clipId = `clip-${box.id}`;
 
-  // テキスト折り返し
-  const textLines =
-    box.content && box.alignment.wrapText
-      ? wrapText(box.content, width, fontSize)
-      : box.content
-        ? [box.content]
-        : [];
+  // テキスト折り返し（\n による明示的改行は常に尊重）
+  const textLines = box.content
+    ? splitTextLines(box.content, box.alignment.wrapText, width, fontSize)
+    : [];
 
   const lineHeight = fontSize * 1.2;
   const totalTextHeight = textLines.length * lineHeight;
