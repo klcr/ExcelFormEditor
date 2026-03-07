@@ -161,16 +161,27 @@ describe('parseWorksheet', () => {
     });
   });
 
-  it('fitToPage を抽出する', () => {
+  it('fitToPage を <sheetPr><pageSetUpPr> から抽出する', () => {
     const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>
       <sheetData/>
-      <pageSetup paperSize="9" orientation="landscape" fitToPage="1" fitToWidth="1" fitToHeight="1"/>
+      <pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>
     </worksheet>`;
 
     const result = parseWorksheet(xml, [], null);
     expect(result.pageSetup.fitToPage).toBe(true);
     expect(result.pageSetup.fitToWidth).toBe(1);
-    expect(result.pageSetup.fitToHeight).toBe(1);
+    expect(result.pageSetup.fitToHeight).toBe(0);
+  });
+
+  it('sheetPr が無い場合 fitToPage は設定されない', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData/>
+      <pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="1"/>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    expect(result.pageSetup.fitToPage).toBeUndefined();
   });
 
   it('マージンを抽出する（インチ単位）', () => {
@@ -264,5 +275,48 @@ describe('parseWorksheet', () => {
 
     const result = parseWorksheet(xml, [], null);
     expect(result.cells[0]?.value).toBe('inline text');
+  });
+
+  it('rowBreaks がある場合、rowHeights をブレーク行以降まで拡張する', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData>
+        <row r="1" ht="20"><c r="A1"><v>page1</v></c></row>
+        <row r="2" ht="20"><c r="A2"><v>page1</v></c></row>
+      </sheetData>
+      <rowBreaks count="1"><brk id="2" max="16383" man="1"/></rowBreaks>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    // rowBreaks=[2] → maxBreakRow=3 → totalRows=max(2,3,2)=3
+    expect(result.rowHeights).toHaveLength(3);
+    expect(result.rowBreaks).toEqual([2]);
+  });
+
+  it('複数ページの帳票（fitToPage + rowBreaks）を正しくパースする', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>
+      <sheetFormatPr defaultRowHeight="15"/>
+      <cols><col min="1" max="8" width="10"/></cols>
+      <sheetData>
+        <row r="1" ht="30"><c r="A1" t="s"><v>0</v></c></row>
+        <row r="10" ht="20"><c r="A10"><v>page1-last</v></c></row>
+        <row r="11" ht="30"><c r="A11"><v>page2-first</v></c></row>
+        <row r="20" ht="20"><c r="A20"><v>page2-last</v></c></row>
+      </sheetData>
+      <pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>
+      <pageMargins top="0.79" bottom="0.59" left="0.51" right="0.51" header="0.31" footer="0.31"/>
+      <rowBreaks count="1"><brk id="10" max="16383" man="1"/></rowBreaks>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, sharedStrings, null);
+
+    expect(result.pageSetup.fitToPage).toBe(true);
+    expect(result.pageSetup.fitToWidth).toBe(1);
+    expect(result.pageSetup.fitToHeight).toBe(0);
+    expect(result.rowBreaks).toEqual([10]);
+    // rowHeights: max(20, 11, 20) = 20 → でも maxBreakRow = 11
+    // totalRows = max(20, 11, 20) = 20
+    expect(result.rowHeights.length).toBeGreaterThanOrEqual(20);
+    expect(result.cells).toHaveLength(4);
   });
 });

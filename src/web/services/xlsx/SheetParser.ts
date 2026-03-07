@@ -47,9 +47,16 @@ export function parseWorksheet(
   const columnWidths = parseColumns(ws.cols, defaultColW);
   const { cells, maxRow, maxCol } = parseCells(ws.sheetData, sharedStrings, styles, defaultRowH);
   const rowHeightMap = parseRowHeights(ws.sheetData, defaultRowH);
+  const rowBreaks = parseRowBreaks(ws.rowBreaks);
 
   // 行高配列を構築（1-indexed → 0-indexed）
-  const totalRows = Math.max(maxRow, rowHeightMap.size > 0 ? Math.max(...rowHeightMap.keys()) : 0);
+  // rowBreaks の最大値 + 1 も考慮（ブレーク後にデータが続く場合）
+  const maxBreakRow = rowBreaks.length > 0 ? Math.max(...rowBreaks) + 1 : 0;
+  const totalRows = Math.max(
+    maxRow,
+    maxBreakRow,
+    rowHeightMap.size > 0 ? Math.max(...rowHeightMap.keys()) : 0,
+  );
   const rowHeights: number[] = [];
   for (let r = 1; r <= totalRows; r++) {
     rowHeights.push(rowHeightMap.get(r) ?? defaultRowH);
@@ -61,14 +68,17 @@ export function parseWorksheet(
     columnWidths.push(defaultColW);
   }
 
+  // fitToPage は <sheetPr><pageSetUpPr fitToPage="1"/> から取得
+  const fitToPage = parseFitToPage(ws.sheetPr);
+
   return {
     cells,
     merges: parseMerges(ws.mergeCells),
     columnWidths,
     rowHeights,
-    pageSetup: parsePageSetup(ws.pageSetup),
+    pageSetup: parsePageSetup(ws.pageSetup, fitToPage),
     margins: parseMargins(ws.pageMargins),
-    rowBreaks: parseRowBreaks(ws.rowBreaks),
+    rowBreaks,
   };
 }
 
@@ -181,11 +191,24 @@ function parseMerges(mergeCellsNode: unknown): string[] {
 
 // --- Page Setup ---
 
-function parsePageSetup(node: unknown): RawPageSetup {
-  if (!isObj(node)) return {};
-  const o = node as Record<string, unknown>;
+/**
+ * OOXML では fitToPage は <sheetPr><pageSetUpPr fitToPage="1"/> にある。
+ * <pageSetup> には fitToWidth/fitToHeight のみが含まれる。
+ */
+function parseFitToPage(sheetPrNode: unknown): boolean | undefined {
+  if (!isObj(sheetPrNode)) return undefined;
+  const o = sheetPrNode as Record<string, unknown>;
+  const pageSetUpPr = o.pageSetUpPr;
+  if (!isObj(pageSetUpPr)) return undefined;
+  return toBool((pageSetUpPr as Record<string, unknown>)['@_fitToPage']);
+}
 
-  const fitToPage = toBool(o['@_fitToPage']);
+function parsePageSetup(node: unknown, fitToPage: boolean | undefined): RawPageSetup {
+  if (!isObj(node)) {
+    // <pageSetup> が無い場合でも fitToPage は設定可能
+    return fitToPage !== undefined ? { fitToPage } : {};
+  }
+  const o = node as Record<string, unknown>;
 
   return {
     ...(o['@_paperSize'] !== undefined ? { paperSize: toNumOr(o['@_paperSize'], undefined) } : {}),
