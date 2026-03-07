@@ -1,17 +1,22 @@
-import type { ParsedSheet } from '@domain/excel';
+import type { PageDefinition } from '@domain/page';
+import { prefixPageIds } from '@domain/page';
 import { createPaperDefinition } from '@domain/paper';
 import { AppLayout } from '@web/components/common/AppLayout';
 import { BottomNav } from '@web/components/common/BottomNav';
 import { Header } from '@web/components/common/Header';
+import { PageTabs } from '@web/components/common/PageTabs';
 import { Sidebar } from '@web/components/common/Sidebar';
 import { DebugPanel } from '@web/components/debug/DebugPanel';
 import { EditorLayout } from '@web/components/editor/EditorLayout';
 import { PreviewCanvas } from '@web/components/preview/PreviewCanvas';
 import { FileUploader } from '@web/components/upload/FileUploader';
+import { SheetSelector } from '@web/components/upload/SheetSelector';
 import { useExcelParse } from '@web/hooks/useExcelParse';
 import { useFileUpload } from '@web/hooks/useFileUpload';
 import { useLayoutMode } from '@web/hooks/useLayoutMode';
-import { useState } from 'react';
+import { useMultiPageEditor } from '@web/hooks/useMultiPageEditor';
+import { paperSizeLabel } from '@web/services/parseExcelFile';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './App.module.css';
 
 const defaultPaperResult = createPaperDefinition({
@@ -28,25 +33,94 @@ const NAV_ITEMS = [
   { id: 'editor', label: '編集' },
 ] as const;
 
+const EMPTY_PAGES: readonly PageDefinition[] = [];
+
 export function App() {
   const { file, handleFileSelect, clearFile } = useFileUpload();
   const { parseState } = useExcelParse(file);
   const layoutMode = useLayoutMode();
   const [activeMode, setActiveMode] = useState<AppMode>('upload');
 
-  const firstSheet: ParsedSheet | undefined =
-    parseState.status === 'success' ? parseState.result.parsed[0] : undefined;
-
-  const paper = firstSheet?.paper ?? defaultPaper;
-  const boxes = firstSheet?.boxes ?? [];
-  const lines = firstSheet?.lines ?? [];
+  // Sheet selection state
+  const [selectedSheetIndices, setSelectedSheetIndices] = useState<number[]>([]);
+  const [importedPages, setImportedPages] = useState<readonly PageDefinition[]>(EMPTY_PAGES);
 
   const hasParseResult = parseState.status === 'success';
+  const hasPages = importedPages.length > 0;
+
+  // Build sheet info for SheetSelector
+  const sheetInfoList = useMemo(() => {
+    if (parseState.status !== 'success') return [];
+    return parseState.result.debug.sheets.map((s) => ({
+      name: s.name,
+      paperSize: paperSizeLabel(s.pageSetup.paperSize),
+      orientation: s.pageSetup.orientation ?? '未設定',
+    }));
+  }, [parseState]);
+
+  // Auto-select all sheets when parse succeeds
+  useEffect(() => {
+    if (parseState.status === 'success') {
+      const indices = parseState.result.parsed.map((_, i) => i);
+      setSelectedSheetIndices(indices);
+      // Auto-import all sheets
+      const pages = indices
+        .map((i) => {
+          const parsed = parseState.result.parsed[i];
+          const debug = parseState.result.debug.sheets[i];
+          if (!parsed || !debug) return null;
+          return prefixPageIds(parsed, i, debug.name);
+        })
+        .filter((p): p is PageDefinition => p !== null);
+      setImportedPages(pages);
+      setActiveMode('preview');
+    } else {
+      setSelectedSheetIndices([]);
+      setImportedPages(EMPTY_PAGES);
+    }
+  }, [parseState]);
+
+  // Multi-page editor state
+  const { activePageIndex, activePage, pages, switchPage, updatePageBoxes } =
+    useMultiPageEditor(importedPages);
+
+  // Handle re-import from SheetSelector
+  const handleImport = useCallback(() => {
+    if (parseState.status !== 'success') return;
+    const pages = selectedSheetIndices
+      .map((i) => {
+        const parsed = parseState.result.parsed[i];
+        const debug = parseState.result.debug.sheets[i];
+        if (!parsed || !debug) return null;
+        return prefixPageIds(parsed, i, debug.name);
+      })
+      .filter((p): p is PageDefinition => p !== null);
+    setImportedPages(pages);
+    setActiveMode('preview');
+  }, [parseState, selectedSheetIndices]);
+
+  // Handle box changes from EditorLayout
+  const handleBoxesChange = useCallback(
+    (boxes: readonly import('@domain/box').BoxDefinition[]) => {
+      updatePageBoxes(activePageIndex, boxes);
+    },
+    [activePageIndex, updatePageBoxes],
+  );
+
+  // Active page data (for preview/editor)
+  const paper = activePage?.paper ?? defaultPaper;
+  const boxes = activePage?.boxes ?? [];
+  const lines = activePage?.lines ?? [];
 
   const navItems = NAV_ITEMS.map((item) => ({
     ...item,
-    disabled: item.id !== 'upload' && !hasParseResult,
+    disabled: item.id !== 'upload' && !hasPages,
   }));
+
+  const pageTabs =
+    hasPages && pages.length > 1 ? (
+      <PageTabs pages={pages} activePageIndex={activePageIndex} onPageSelect={switchPage} />
+    ) : null;
 
   const renderMain = () => {
     if (layoutMode === 'mobile') {
@@ -62,17 +136,47 @@ export function App() {
             </div>
           );
         case 'preview':
-          return <PreviewCanvas paper={paper} boxes={boxes} lines={lines} />;
+          return (
+            <>
+              {pageTabs}
+              <PreviewCanvas paper={paper} boxes={boxes} lines={lines} />
+            </>
+          );
         case 'editor':
-          return <EditorLayout paper={paper} boxes={boxes} lines={lines} layoutMode="mobile" />;
+          return (
+            <>
+              {pageTabs}
+              <EditorLayout
+                key={activePageIndex}
+                paper={paper}
+                boxes={boxes}
+                lines={lines}
+                layoutMode="mobile"
+                onBoxesChange={handleBoxesChange}
+              />
+            </>
+          );
       }
     }
 
     if (activeMode === 'editor') {
-      return <EditorLayout paper={paper} boxes={boxes} lines={lines} layoutMode="desktop" />;
+      return (
+        <>
+          {pageTabs}
+          <EditorLayout
+            key={activePageIndex}
+            paper={paper}
+            boxes={boxes}
+            lines={lines}
+            layoutMode="desktop"
+            onBoxesChange={handleBoxesChange}
+          />
+        </>
+      );
     }
     return (
       <>
+        {pageTabs}
         <PreviewCanvas paper={paper} boxes={boxes} lines={lines} />
         <DebugPanel parseState={parseState} />
       </>
@@ -87,6 +191,15 @@ export function App() {
         <Sidebar>
           <FileUploader onFileSelect={handleFileSelect} acceptedFile={file} onClear={clearFile} />
           {hasParseResult && (
+            <SheetSelector
+              sheets={sheetInfoList}
+              selectedIndices={selectedSheetIndices}
+              onSelectionChange={setSelectedSheetIndices}
+              onImport={handleImport}
+              disabled={!hasParseResult}
+            />
+          )}
+          {hasPages && (
             <div className={styles.modeSwitch} data-testid="mode-switch">
               <button
                 type="button"

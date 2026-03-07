@@ -1,10 +1,11 @@
 import type { BoxDefinition } from '@domain/box';
 import { generateBoxCss } from '@domain/box';
 import type { LineDefinition, LineStyle } from '@domain/line';
+import type { PageDefinition } from '@domain/page';
 import type { PaperDefinition } from '@domain/paper';
 import { INCHES_TO_MM, PAPER_DIMENSIONS } from '@domain/paper';
 import type { VariableDefinition } from '@domain/variable';
-import { generateManifest } from './ManifestGenerator';
+import { generateManifest, generateMultiPageManifest } from './ManifestGenerator';
 import { classifyBoxRole } from './RoleClassifier';
 
 type ExportParams = {
@@ -233,6 +234,133 @@ ${boxElements.join('\n\n')}
 ${lineElements.join('\n\n')}
 
 </section>
+
+<script type="application/json" id="template-manifest">
+${JSON.stringify(manifest, null, 2)}
+</script>
+</body>
+</html>`;
+}
+
+type MultiPageExportParams = {
+  readonly pages: readonly PageDefinition[];
+  readonly pageVariables: ReadonlyMap<number, readonly VariableDefinition[]>;
+  readonly templateId: string;
+  readonly templateVersion: string;
+};
+
+/** ページの用紙寸法を計算する */
+function computePageDims(paper: PaperDefinition) {
+  return paper.orientation === 'landscape'
+    ? { w: PAPER_DIMENSIONS[paper.size].height, h: PAPER_DIMENSIONS[paper.size].width }
+    : { w: PAPER_DIMENSIONS[paper.size].width, h: PAPER_DIMENSIONS[paper.size].height };
+}
+
+/** ページの余白を mm に変換する */
+function computePageMarginsMm(paper: PaperDefinition) {
+  return {
+    top: paper.margins.top * INCHES_TO_MM,
+    right: paper.margins.right * INCHES_TO_MM,
+    bottom: paper.margins.bottom * INCHES_TO_MM,
+    left: paper.margins.left * INCHES_TO_MM,
+  };
+}
+
+/** 1ページ分の section HTML を生成する */
+function buildPageSection(
+  page: PageDefinition,
+  variables: readonly VariableDefinition[],
+  templateId: string,
+  templateVersion: string,
+): string {
+  const dims = computePageDims(page.paper);
+  const marginsMm = computePageMarginsMm(page.paper);
+
+  const boxElements = page.boxes.map((box) => {
+    const role = classifyBoxRole(box, variables);
+    const css = generateBoxCss(box);
+    const content = getBoxDisplayContent(box, variables);
+    const attrs = boxDataAttrs(box, role, variables);
+    return `  <div class="box"\n       ${attrs}\n       style="${css.replace(/\n/g, ' ')}">${content}</div>`;
+  });
+
+  const lineElements = page.lines.map((line) => {
+    const css = generateLineCss(line);
+    const widthMm = lineWidthMm(line.style);
+    return `  <div class="line"\n       data-line-id="${line.id}"\n       data-x1-mm="${line.start.x}" data-y1-mm="${line.start.y}"\n       data-x2-mm="${line.end.x}" data-y2-mm="${line.end.y}"\n       data-stroke-width-mm="${widthMm}"\n       style="${css}"></div>`;
+  });
+
+  return `<section class="sheet"
+  data-page-index="${page.pageIndex}"
+  data-sheet-name="${escapeHtml(page.sheetName)}"
+  data-template-id="${escapeHtml(templateId)}"
+  data-template-version="${escapeHtml(templateVersion)}"
+  data-paper-size="${page.paper.size}"
+  data-orientation="${page.paper.orientation}"
+  data-width-mm="${dims.w}"
+  data-height-mm="${dims.h}"
+  data-margin-top-mm="${marginsMm.top.toFixed(1)}"
+  data-margin-right-mm="${marginsMm.right.toFixed(1)}"
+  data-margin-bottom-mm="${marginsMm.bottom.toFixed(1)}"
+  data-margin-left-mm="${marginsMm.left.toFixed(1)}"
+  data-origin="printable-area"
+  style="position: relative; width: ${page.paper.printableArea.width}mm; height: ${page.paper.printableArea.height}mm; overflow: hidden;">
+
+${boxElements.join('\n\n')}
+
+${lineElements.join('\n\n')}
+
+</section>`;
+}
+
+/** マルチページ帳票テンプレートを HTML として出力する */
+export function exportMultiPageAsHtml(params: MultiPageExportParams): string {
+  const { pages, pageVariables, templateId, templateVersion } = params;
+
+  const manifest = generateMultiPageManifest({
+    pages,
+    pageVariables,
+    templateId,
+    templateVersion,
+  });
+
+  // Build @page CSS rules per page
+  const pageStyles = pages.map((page, i) => {
+    const dims = computePageDims(page.paper);
+    const marginsMm = computePageMarginsMm(page.paper);
+    const pageName = `page${i}`;
+    return `  @page ${pageName} {
+    size: ${dims.w}mm ${dims.h}mm;
+    margin: ${marginsMm.top.toFixed(1)}mm ${marginsMm.right.toFixed(1)}mm ${marginsMm.bottom.toFixed(1)}mm ${marginsMm.left.toFixed(1)}mm;
+  }
+  .sheet[data-page-index="${i}"] { page: ${pageName}; }`;
+  });
+
+  const sections = pages.map((page) => {
+    const vars = pageVariables.get(page.pageIndex) ?? [];
+    return buildPageSection(page, vars, templateId, templateVersion);
+  });
+
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(templateId)}</title>
+<style>
+${pageStyles.join('\n')}
+  .sheet {
+    page-break-after: always;
+  }
+  .sheet:last-child {
+    page-break-after: auto;
+  }
+  .box {
+    overflow: hidden;
+  }
+</style>
+</head>
+<body>
+${sections.join('\n\n')}
 
 <script type="application/json" id="template-manifest">
 ${JSON.stringify(manifest, null, 2)}

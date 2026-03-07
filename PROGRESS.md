@@ -4,7 +4,7 @@
 
 ## スナップショット
 
-- **全体進捗**: 100%（Phase 1-5 全完了）
+- **全体進捗**: 100%（Phase 1-5 全完了 + マルチシート対応追加）
 - **アクティブフェーズ**: なし（全フェーズ完了）
 - **ブロッカー**: なし
 - **最終変動日**: 2026-03-07
@@ -19,6 +19,7 @@
 | 3 | 変数バインディングと型定義 | done | 100% | 2026-03-06 | Variable集約、VariableBindingSection、InterfacePreview、VariableListPanel |
 | 4 | レイアウト微調整 UI | done | 100% | 2026-03-07 | PaddingSection、PropertyPanel全セクション統合、3層HTML エクスポート機能完了 |
 | 5 | UI動線整理 + レスポンシブ対応 | done | 100% | 2026-03-06 | useLayoutMode, BottomSheet, BottomNav, AppLayout/EditorLayoutレスポンシブ化, CssPreview統合 |
+| 6 | マルチシート対応 | done | 100% | 2026-03-07 | シート選択・ページタブ・ページ切替・マルチページエクスポート |
 
 ## ブロッカー
 
@@ -37,6 +38,23 @@
 ## diff
 
 ```diff
+# マルチシート対応（2026-03-07）
++ Phase 6: done / 100% — マルチシート対応
++ domain/page 集約新規作成: PageDefinition 型、prefixPageIds() で ID 一意性保証
++ domain/export 拡張: exportMultiPageAsHtml(), generateMultiPageManifest()
++ ExportTypes: PageManifestEntry, MultiPageTemplateManifest 型追加
++ SheetSelector コンポーネント: サイドバーにシート選択チェックリスト表示
++ PageTabs コンポーネント: プレビュー・編集モードでページ切替タブ（1ページ時は非表示）
++ useMultiPageEditor フック: ページ別ボックス状態管理
++ EditorLayout: onBoxesChange コールバック追加（key によるリマウント方式でUndo履歴リセット）
++ App.tsx: 全シート自動インポート + シート選択UI + ページ切替統合
++ 全522テスト パス — build + check-all 通過
+```
+
+<details>
+<summary>前回の diff（2026-03-07: Phase 4 完了）</summary>
+
+```diff
 # Phase 4 完了 — PaddingSection + PropertyPanel統合 + エクスポート機能（2026-03-07）
 - 全体進捗: 92%
 + 全体進捗: 100%
@@ -53,8 +71,10 @@
 + 全498テスト パス
 ```
 
+</details>
+
 <details>
-<summary>前回の diff（2026-03-06: UI動線整理 + レスポンシブ対応）</summary>
+<summary>前々回の diff（2026-03-06: UI動線整理 + レスポンシブ対応）</summary>
 
 ```diff
 # UI動線整理 + レスポンシブ対応（2026-03-06）
@@ -72,7 +92,7 @@
 </details>
 
 <details>
-<summary>前々回の diff（2026-03-06: Wave 0-3 並列実装）</summary>
+<summary>前々々回の diff（2026-03-06: Wave 0-3 並列実装）</summary>
 
 ```diff
 # Wave 0-3 並列エージェント実装（2026-03-06）
@@ -94,50 +114,25 @@
 </details>
 
 <details>
-<summary>前回の diff（2026-03-06: 整合性検証）</summary>
+<summary>過去の diff（2026-03-06: 整合性検証 + ブロッカー解消 + Phase 1→2 進捗）</summary>
 
 ```diff
 # 整合性検証による修正（2026-03-06）
 - 事象 002: `formatCellValue.test.ts` の外部ファイル依存（解決済み）
 + 事象 002: レイアウト崩れ: プレビュー表示の複合問題（症状A,B,C,D修正済み、症状E未対応）
-+ 事象 002 の記述を実際の issue レポート（002-layout-rendering-issues.md）と整合させた
-```
 
-</details>
-
-<details>
-<summary>前々回の diff（2026-03-06: ブロッカー解消）</summary>
-
-```diff
 # ブロッカー解消（2026-03-06）
 - ブロッカー: 1 件（Lint 違反・テスト失敗で check-all 未通過）
 + ブロッカー: なし
-- 全 288 テスト（285 passed / 3 failed）— check-all 未通過
-+ 全 288 テスト パス — build + check-all 通過
-+ noNonNullAssertion 違反 12 件を解消（?? 0 / 分割代入 / ガード節）
++ noNonNullAssertion 違反 12 件を解消
 + formatCellValue.test.ts: テスト計算書.xlsx 依存を除去
-+ 見積書フィクスチャ（createEstimateWorkbook.ts）を追加
-+ 事象 002 解決済み
-```
 
-</details>
-
-<details>
-<summary>前々々回の diff（2026-03-06: Phase 1→2 進捗）</summary>
-
-```diff
+# Phase 1→2 進捗（2026-03-06）
 - 全体進捗: 40%
 + 全体進捗: 55%
-- Phase 1: active / 90%
 + Phase 1: done / 100%
-+ Phase 1: 統合テスト（ExcelUploadPreview.test.tsx）追加 — 9テスト
-+ Backlog 001 全チェックリスト完了
-- Phase 2: not-started / 0%
 + Phase 2: active / 40%
-+ BoxOperations.ts 実装（moveBox, resizeBox, splitBoxH/V, snapToGrid, findNearestSnapPoints）— 35テスト
-+ useBoxEditor.ts フック実装（選択・移動・リサイズ状態管理）— 8テスト
-+ BoxOverlay.tsx（選択UI）、DragHandle.tsx（ドラッグ移動）、ResizeHandle.tsx（リサイズハンドル）— 18テスト
-+ 全 288 テスト（285 passed / 3 failed）
++ BoxOperations.ts, useBoxEditor.ts, BoxOverlay/DragHandle/ResizeHandle 実装
 ```
 
 </details>

@@ -1,10 +1,12 @@
 export type {
   BoxRole,
   FieldMapping,
+  MultiPageTemplateManifest,
+  PageManifestEntry,
   PaperInfo,
   Region,
   TemplateManifest,
 } from './ExportTypes';
 export { classifyBoxRole } from './RoleClassifier';
-export { generateManifest } from './ManifestGenerator';
-export { exportAsHtml } from './TemplateExporter';
+export { generateManifest, generateMultiPageManifest } from './ManifestGenerator';
+export { exportAsHtml, exportMultiPageAsHtml } from './TemplateExporter';

@@ -1,0 +1,23 @@
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-sidebar-bg);
+}
+
+.tab {
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.tabActive {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
