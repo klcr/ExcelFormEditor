@@ -12,6 +12,8 @@ type SheetSelectorProps = {
   readonly selectedIndices: readonly number[];
   readonly onSelectionChange: (indices: number[]) => void;
   readonly onImport: () => void;
+  readonly onExport?: () => void;
+  readonly exportDisabled?: boolean;
   readonly disabled?: boolean;
 };
 
@@ -25,6 +27,8 @@ export function SheetSelector({
   selectedIndices,
   onSelectionChange,
   onImport,
+  onExport,
+  exportDisabled = true,
   disabled = false,
 }: SheetSelectorProps) {
   const handleToggle = (index: number) => {
@@ -69,6 +73,17 @@ export function SheetSelector({
       >
         読み込み ({selectedIndices.length}/{sheets.length})
       </button>
+      {onExport && (
+        <button
+          type="button"
+          className={styles.exportButton}
+          onClick={onExport}
+          disabled={exportDisabled}
+          data-testid="export-button"
+        >
+          エクスポート
+        </button>
+      )}
     </div>
   );
 }

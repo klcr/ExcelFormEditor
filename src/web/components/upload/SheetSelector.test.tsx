@@ -125,4 +125,66 @@ describe('SheetSelector', () => {
 
     expect(screen.getByTestId('import-sheets-button')).toHaveTextContent('読み込み (2/3)');
   });
+
+  it('onExport が渡された場合、エクスポートボタンを表示する', () => {
+    render(
+      <SheetSelector
+        sheets={sheets}
+        selectedIndices={[0]}
+        onSelectionChange={vi.fn()}
+        onImport={vi.fn()}
+        onExport={vi.fn()}
+        exportDisabled={false}
+      />,
+    );
+
+    expect(screen.getByTestId('export-button')).toBeInTheDocument();
+    expect(screen.getByTestId('export-button')).not.toBeDisabled();
+  });
+
+  it('exportDisabled が true の場合、エクスポートボタンが無効になる', () => {
+    render(
+      <SheetSelector
+        sheets={sheets}
+        selectedIndices={[0]}
+        onSelectionChange={vi.fn()}
+        onImport={vi.fn()}
+        onExport={vi.fn()}
+        exportDisabled
+      />,
+    );
+
+    expect(screen.getByTestId('export-button')).toBeDisabled();
+  });
+
+  it('エクスポートボタンクリックで onExport が呼ばれる', () => {
+    const onExport = vi.fn();
+
+    render(
+      <SheetSelector
+        sheets={sheets}
+        selectedIndices={[0]}
+        onSelectionChange={vi.fn()}
+        onImport={vi.fn()}
+        onExport={onExport}
+        exportDisabled={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('export-button'));
+    expect(onExport).toHaveBeenCalledTimes(1);
+  });
+
+  it('onExport が渡されない場合、エクスポートボタンを表示しない', () => {
+    render(
+      <SheetSelector
+        sheets={sheets}
+        selectedIndices={[0]}
+        onSelectionChange={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('export-button')).not.toBeInTheDocument();
+  });
 });

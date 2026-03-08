@@ -1,3 +1,4 @@
+import { exportMultiPageAsHtml } from '@domain/export';
 import type { PageDefinition } from '@domain/page';
 import { prefixPageIds } from '@domain/page';
 import { createPaperDefinition } from '@domain/paper';
@@ -17,6 +18,7 @@ import { useLayoutMode } from '@web/hooks/useLayoutMode';
 import { useMultiPageEditor } from '@web/hooks/useMultiPageEditor';
 import type { SheetParseOutput } from '@web/services/parseExcelFile';
 import { paperSizeLabel } from '@web/services/parseExcelFile';
+import { downloadFile } from '@web/utils/downloadFile';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './App.module.css';
 
@@ -117,6 +119,19 @@ export function App() {
     setActiveMode('preview');
   }, [parseState, selectedSheetIndices]);
 
+  // Handle multi-page export
+  const handleExport = useCallback(() => {
+    if (pages.length === 0) return;
+    const templateId = file?.name.replace(/\.[^.]+$/, '') ?? 'template';
+    const html = exportMultiPageAsHtml({
+      pages,
+      pageVariables: new Map(),
+      templateId,
+      templateVersion: '1.0.0',
+    });
+    downloadFile(html, `${templateId}.html`, 'text/html');
+  }, [pages, file]);
+
   // Handle box changes from EditorLayout
   const handleBoxesChange = useCallback(
     (boxes: readonly import('@domain/box').BoxDefinition[]) => {
@@ -151,6 +166,17 @@ export function App() {
                 acceptedFile={file}
                 onClear={clearFile}
               />
+              {hasParseResult && (
+                <SheetSelector
+                  sheets={sheetInfoList}
+                  selectedIndices={selectedSheetIndices}
+                  onSelectionChange={setSelectedSheetIndices}
+                  onImport={handleImport}
+                  onExport={handleExport}
+                  exportDisabled={!hasPages}
+                  disabled={!hasParseResult}
+                />
+              )}
             </div>
           );
         case 'preview':
@@ -168,7 +194,6 @@ export function App() {
                 key={activePageIndex}
                 paper={paper}
                 boxes={boxes}
-                lines={lines}
                 layoutMode="mobile"
                 onBoxesChange={handleBoxesChange}
               />
@@ -185,7 +210,6 @@ export function App() {
             key={activePageIndex}
             paper={paper}
             boxes={boxes}
-            lines={lines}
             layoutMode="desktop"
             onBoxesChange={handleBoxesChange}
           />
@@ -214,6 +238,8 @@ export function App() {
               selectedIndices={selectedSheetIndices}
               onSelectionChange={setSelectedSheetIndices}
               onImport={handleImport}
+              onExport={handleExport}
+              exportDisabled={!hasPages}
               disabled={!hasParseResult}
             />
           )}
