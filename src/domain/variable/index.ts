@@ -6,3 +6,8 @@ export {
   validateVariableName,
 } from './VariableValidation';
 export { generateTypeScriptInterface } from './InterfaceGenerator';
+export {
+  generateSequentialVariables,
+  generateVariableId,
+  resetVariableIdCounter,
+} from './SequentialVariableAssignment';
