@@ -11,13 +11,13 @@ import { DebugPanel } from '@web/components/debug/DebugPanel';
 import { EditorLayout } from '@web/components/editor/EditorLayout';
 import { PreviewCanvas } from '@web/components/preview/PreviewCanvas';
 import { FileUploader } from '@web/components/upload/FileUploader';
-import { SheetSelector } from '@web/components/upload/SheetSelector';
+import type { PageGroup } from '@web/components/upload/PageSelector';
+import { PageSelector } from '@web/components/upload/PageSelector';
 import { useExcelParse } from '@web/hooks/useExcelParse';
 import { useFileUpload } from '@web/hooks/useFileUpload';
 import { useLayoutMode } from '@web/hooks/useLayoutMode';
 import { useMultiPageEditor } from '@web/hooks/useMultiPageEditor';
 import type { SheetParseOutput } from '@web/services/parseExcelFile';
-import { paperSizeLabel } from '@web/services/parseExcelFile';
 import { downloadFile } from '@web/utils/downloadFile';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './App.module.css';
@@ -38,17 +38,12 @@ const NAV_ITEMS = [
 
 const EMPTY_PAGES: readonly PageDefinition[] = [];
 
-/** シートの配列をフラットな PageDefinition[] に変換する */
-function flattenSheets(
-  sheets: readonly SheetParseOutput[],
-  selectedIndices: readonly number[],
-): PageDefinition[] {
+/** 全シートをフラットな PageDefinition[] に変換する */
+function flattenAllSheets(sheets: readonly SheetParseOutput[]): PageDefinition[] {
   const pages: PageDefinition[] = [];
   let pageIndex = 0;
 
   for (const sheet of sheets) {
-    if (!selectedIndices.includes(sheet.sheetIndex)) continue;
-
     const totalSubPages = sheet.pages.length;
     for (let subIdx = 0; subIdx < totalSubPages; subIdx++) {
       const parsed = sheet.pages[subIdx];
@@ -64,73 +59,109 @@ function flattenSheets(
   return pages;
 }
 
+/** SheetParseOutput[] と allPages からツリー構造の PageGroup[] を構築する */
+function buildPageGroups(
+  sheets: readonly SheetParseOutput[],
+  allPages: readonly PageDefinition[],
+): PageGroup[] {
+  let offset = 0;
+  return sheets.map((sheet) => {
+    const pageCount = sheet.pages.length;
+    const groupPages = allPages.slice(offset, offset + pageCount).map((p) => ({
+      pageIndex: p.pageIndex,
+      pageName: p.sheetName,
+    }));
+    offset += pageCount;
+    return {
+      sheetName: sheet.sheetName,
+      pages: groupPages,
+    };
+  });
+}
+
 export function App() {
   const { file, handleFileSelect, clearFile } = useFileUpload();
   const { parseState } = useExcelParse(file);
   const layoutMode = useLayoutMode();
   const [activeMode, setActiveMode] = useState<AppMode>('upload');
 
-  // Sheet selection state
-  const [selectedSheetIndices, setSelectedSheetIndices] = useState<number[]>([]);
-  const [importedPages, setImportedPages] = useState<readonly PageDefinition[]>(EMPTY_PAGES);
+  // Page-level selection state
+  const [allPages, setAllPages] = useState<readonly PageDefinition[]>(EMPTY_PAGES);
+  const [selectedPageIndices, setSelectedPageIndices] = useState<number[]>([]);
+  const [hiddenPageIndices, setHiddenPageIndices] = useState<Set<number>>(new Set());
 
   const hasParseResult = parseState.status === 'success';
-  const hasPages = importedPages.length > 0;
 
-  // Build sheet info for SheetSelector
-  const sheetInfoList = useMemo(() => {
+  // Visible pages = all pages minus hidden ones
+  const visiblePages = useMemo(
+    () => allPages.filter((p) => !hiddenPageIndices.has(p.pageIndex)),
+    [allPages, hiddenPageIndices],
+  );
+  const hasPages = visiblePages.length > 0;
+
+  // Build page groups for PageSelector
+  const pageGroups = useMemo(() => {
     if (parseState.status !== 'success') return [];
-    return parseState.result.debug.sheets.map((s, i) => {
-      const sheetOutput = parseState.result.sheets[i];
-      const pageCount = sheetOutput?.pages.length ?? 1;
-      return {
-        name: s.name,
-        paperSize: paperSizeLabel(s.pageSetup.paperSize),
-        orientation: s.pageSetup.orientation ?? '未設定',
-        pageCount,
-      };
-    });
-  }, [parseState]);
+    return buildPageGroups(parseState.result.sheets, allPages);
+  }, [parseState, allPages]);
 
-  // Auto-select all sheets when parse succeeds
+  // Auto-import all pages when parse succeeds
   useEffect(() => {
     if (parseState.status === 'success') {
-      const indices = parseState.result.sheets.map((s) => s.sheetIndex);
-      setSelectedSheetIndices(indices);
-      // Auto-import all sheets
-      const pages = flattenSheets(parseState.result.sheets, indices);
-      setImportedPages(pages);
+      const pages = flattenAllSheets(parseState.result.sheets);
+      setAllPages(pages);
+      setSelectedPageIndices(pages.map((p) => p.pageIndex));
+      setHiddenPageIndices(new Set());
       setActiveMode('preview');
     } else {
-      setSelectedSheetIndices([]);
-      setImportedPages(EMPTY_PAGES);
+      setAllPages(EMPTY_PAGES);
+      setSelectedPageIndices([]);
+      setHiddenPageIndices(new Set());
     }
   }, [parseState]);
 
-  // Multi-page editor state
+  // Multi-page editor state (uses visible pages)
   const { activePageIndex, activePage, pages, switchPage, updatePageBoxes } =
-    useMultiPageEditor(importedPages);
+    useMultiPageEditor(visiblePages);
 
-  // Handle re-import from SheetSelector
-  const handleImport = useCallback(() => {
-    if (parseState.status !== 'success') return;
-    const pages = flattenSheets(parseState.result.sheets, selectedSheetIndices);
-    setImportedPages(pages);
-    setActiveMode('preview');
-  }, [parseState, selectedSheetIndices]);
+  // Handle page close from PageTabs
+  const handlePageClose = useCallback(
+    (pageIndex: number) => {
+      setHiddenPageIndices((prev) => {
+        const next = new Set(prev);
+        next.add(pageIndex);
+        return next;
+      });
+      setSelectedPageIndices((prev) => prev.filter((i) => i !== pageIndex));
 
-  // Handle multi-page export
+      // If closing the active page, switch to an adjacent visible page
+      if (pageIndex === activePageIndex) {
+        const remaining = visiblePages.filter((p) => p.pageIndex !== pageIndex);
+        if (remaining.length > 0) {
+          const currentIdx = visiblePages.findIndex((p) => p.pageIndex === pageIndex);
+          const nextPage = remaining[Math.min(currentIdx, remaining.length - 1)];
+          if (nextPage) {
+            switchPage(nextPage.pageIndex);
+          }
+        }
+      }
+    },
+    [activePageIndex, visiblePages, switchPage],
+  );
+
+  // Handle multi-page export (only selected pages)
   const handleExport = useCallback(() => {
-    if (pages.length === 0) return;
+    const exportPages = pages.filter((p) => selectedPageIndices.includes(p.pageIndex));
+    if (exportPages.length === 0) return;
     const templateId = file?.name.replace(/\.[^.]+$/, '') ?? 'template';
     const html = exportMultiPageAsHtml({
-      pages,
+      pages: exportPages,
       pageVariables: new Map(),
       templateId,
       templateVersion: '1.0.0',
     });
     downloadFile(html, `${templateId}.html`, 'text/html');
-  }, [pages, file]);
+  }, [pages, selectedPageIndices, file]);
 
   // Handle box changes from EditorLayout
   const handleBoxesChange = useCallback(
@@ -150,10 +181,24 @@ export function App() {
     disabled: item.id !== 'upload' && !hasPages,
   }));
 
-  const pageTabs =
-    hasPages && pages.length > 1 ? (
-      <PageTabs pages={pages} activePageIndex={activePageIndex} onPageSelect={switchPage} />
-    ) : null;
+  const pageTabs = hasPages ? (
+    <PageTabs
+      pages={visiblePages}
+      activePageIndex={activePageIndex}
+      onPageSelect={switchPage}
+      onPageClose={handlePageClose}
+    />
+  ) : null;
+
+  const pageSelector = (
+    <PageSelector
+      groups={pageGroups}
+      selectedPageIndices={selectedPageIndices}
+      onSelectionChange={setSelectedPageIndices}
+      onExport={handleExport}
+      exportDisabled={selectedPageIndices.length === 0}
+    />
+  );
 
   const renderMain = () => {
     if (layoutMode === 'mobile') {
@@ -166,17 +211,7 @@ export function App() {
                 acceptedFile={file}
                 onClear={clearFile}
               />
-              {hasParseResult && (
-                <SheetSelector
-                  sheets={sheetInfoList}
-                  selectedIndices={selectedSheetIndices}
-                  onSelectionChange={setSelectedSheetIndices}
-                  onImport={handleImport}
-                  onExport={handleExport}
-                  exportDisabled={!hasPages}
-                  disabled={!hasParseResult}
-                />
-              )}
+              {hasParseResult && pageSelector}
             </div>
           );
         case 'preview':
@@ -232,17 +267,7 @@ export function App() {
       sidebar={
         <Sidebar>
           <FileUploader onFileSelect={handleFileSelect} acceptedFile={file} onClear={clearFile} />
-          {hasParseResult && (
-            <SheetSelector
-              sheets={sheetInfoList}
-              selectedIndices={selectedSheetIndices}
-              onSelectionChange={setSelectedSheetIndices}
-              onImport={handleImport}
-              onExport={handleExport}
-              exportDisabled={!hasPages}
-              disabled={!hasParseResult}
-            />
-          )}
+          {hasParseResult && pageSelector}
           {hasPages && (
             <div className={styles.modeSwitch} data-testid="mode-switch">
               <button
