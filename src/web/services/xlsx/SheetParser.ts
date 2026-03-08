@@ -120,7 +120,16 @@ function parseCells(
       const formulaText = extractText(co.f);
       const inlineStr = extractInlineStr(co.is);
 
-      const value = resolveCellValue(type, valueText, formulaText, inlineStr, sharedStrings);
+      const numFmtId = styles && styleIdx >= 0 ? styles.cellXfs[styleIdx]?.numFmtId : undefined;
+      const value = resolveCellValue(
+        type,
+        valueText,
+        formulaText,
+        inlineStr,
+        sharedStrings,
+        numFmtId,
+        styles?.numFmts,
+      );
       const style: RawCellStyle = styles && styleIdx >= 0 ? resolveStyle(styleIdx, styles) : {};
 
       // 値もスタイルもない空セルはスキップ
@@ -151,8 +160,13 @@ function parseRowHeights(sheetData: unknown, defaultRowH: number): Map<number, n
     const o = row as Record<string, unknown>;
     const r = toNumOr(o['@_r'], 0);
     if (r === 0) continue;
-    const ht = toNumOr(o['@_ht'], -1);
-    map.set(r, ht >= 0 ? ht : defaultRowH);
+    const hidden = toBool(o['@_hidden']);
+    if (hidden) {
+      map.set(r, 0);
+    } else {
+      const ht = toNumOr(o['@_ht'], -1);
+      map.set(r, ht >= 0 ? ht : defaultRowH);
+    }
   }
 
   return map;
@@ -169,7 +183,8 @@ function parseColumns(colsNode: unknown, defaultWidth: number): number[] {
     const o = col as Record<string, unknown>;
     const min = toNumOr(o['@_min'], 0);
     const max = toNumOr(o['@_max'], 0);
-    const width = toNumOr(o['@_width'], defaultWidth);
+    const hidden = toBool(o['@_hidden']);
+    const width = hidden ? 0 : toNumOr(o['@_width'], defaultWidth);
 
     for (let c = min; c <= max; c++) {
       // 0-indexed 配列に格納（col 1 → index 0）

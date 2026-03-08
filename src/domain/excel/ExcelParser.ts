@@ -250,7 +250,7 @@ export function buildColumnPositions(columnWidths: readonly number[]): readonly 
   const positions: number[] = [0];
   for (let i = 0; i < columnWidths.length; i++) {
     const raw = columnWidths[i] ?? DEFAULT_COLUMN_WIDTH;
-    const width = raw > 0 ? raw : DEFAULT_COLUMN_WIDTH;
+    const width = raw >= 0 ? raw : DEFAULT_COLUMN_WIDTH;
     const prev = positions[i] ?? 0;
     positions.push(prev + excelColumnWidthToMm(width));
   }
@@ -262,7 +262,7 @@ export function buildRowPositions(rowHeights: readonly number[]): readonly numbe
   const positions: number[] = [0];
   for (let i = 0; i < rowHeights.length; i++) {
     const raw = rowHeights[i] ?? DEFAULT_ROW_HEIGHT;
-    const height = raw > 0 ? raw : DEFAULT_ROW_HEIGHT;
+    const height = raw >= 0 ? raw : DEFAULT_ROW_HEIGHT;
     const prev = positions[i] ?? 0;
     positions.push(prev + ptToMm(height));
   }
@@ -372,7 +372,7 @@ function buildBoxes(
 
     const merge = mergeMap.get(cell.address);
     const rect = computeCellRect(cell, merge, columnPositions, rowPositions, effectiveScale);
-    if (!rect) continue;
+    if (!rect || rect.size.width === 0 || rect.size.height === 0) continue;
 
     const border = merge ? collectMergeBorder(merge, cellMap) : convertBorder(cell.style.border);
 

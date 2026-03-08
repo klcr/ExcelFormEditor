@@ -1,3 +1,5 @@
+import { formatCellValue } from './NumFmtResolver';
+
 /**
  * OOXML の <c> 要素からセル値を文字列に解決する。
  *
@@ -15,13 +17,16 @@ export function resolveCellValue(
   formulaText: string | undefined,
   inlineStr: string | undefined,
   sharedStrings: readonly string[],
+  numFmtId?: number,
+  numFmts?: ReadonlyMap<number, string>,
 ): string {
   // 数式セル: キャッシュ結果 (<v>) を返す
   if (formulaText !== undefined) {
     if (type === 'e') return valueText ?? '';
     if (type === 'str') return valueText ?? '';
     if (type === 'b') return booleanToString(valueText);
-    return valueText ?? '';
+    const raw = valueText ?? '';
+    return applyNumFmt(raw, type, numFmtId, numFmts);
   }
 
   switch (type) {
@@ -38,11 +43,29 @@ export function resolveCellValue(
     case 'e':
       return valueText ?? '';
     case 'n':
-    case undefined:
-      return valueText ?? '';
+    case undefined: {
+      const raw = valueText ?? '';
+      return applyNumFmt(raw, type, numFmtId, numFmts);
+    }
     default:
       return valueText ?? '';
   }
+}
+
+/** 数値型セルに numFmt を適用する */
+function applyNumFmt(
+  raw: string,
+  type: string | undefined,
+  numFmtId: number | undefined,
+  numFmts: ReadonlyMap<number, string> | undefined,
+): string {
+  if (!raw) return raw;
+  // 文字列型は対象外
+  if (type === 's' || type === 'str' || type === 'inlineStr') return raw;
+  // numFmtId が無い or 0 (General) ならそのまま
+  if (numFmtId === undefined || numFmtId === 0) return raw;
+
+  return formatCellValue(raw, numFmtId, numFmts ?? new Map());
 }
 
 function booleanToString(v: string | undefined): string {

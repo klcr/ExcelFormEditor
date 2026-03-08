@@ -114,10 +114,23 @@ describe('buildColumnPositions', () => {
     expect(positions[2]).toBeCloseTo((positions[1] ?? 0) * 2, 5);
   });
 
-  it('幅 0 以下はデフォルト列幅を使用する', () => {
-    const withZero = buildColumnPositions([0]);
+  it('幅 0 は非表示列として 0mm を返す', () => {
+    const positions = buildColumnPositions([0]);
+    expect(positions[1]).toBe(0);
+  });
+
+  it('幅が負の場合はデフォルト列幅を使用する', () => {
+    const withNeg = buildColumnPositions([-1]);
     const withDefault = buildColumnPositions([8.43]);
-    expect(withZero[1]).toBeCloseTo(withDefault[1] ?? 0, 5);
+    expect(withNeg[1]).toBeCloseTo(withDefault[1] ?? 0, 5);
+  });
+
+  it('非表示列の後も累積座標が正しい', () => {
+    const positions = buildColumnPositions([8.43, 0, 8.43]);
+    expect(positions).toHaveLength(4);
+    // 1列目の幅 + 0 (非表示) + 1列目の幅
+    expect(positions[2]).toBeCloseTo(positions[1] ?? 0, 5);
+    expect(positions[3]).toBeCloseTo((positions[1] ?? 0) * 2, 5);
   });
 });
 
@@ -136,10 +149,24 @@ describe('buildRowPositions', () => {
     expect(positions[2]).toBeCloseTo(12.348, 3);
   });
 
-  it('高さ 0 以下はデフォルト行高を使用する', () => {
-    const withZero = buildRowPositions([0]);
+  it('高さ 0 は非表示行として 0mm を返す', () => {
+    const positions = buildRowPositions([0]);
+    expect(positions[1]).toBe(0);
+  });
+
+  it('高さが負の場合はデフォルト行高を使用する', () => {
+    const withNeg = buildRowPositions([-1]);
     const withDefault = buildRowPositions([15]);
-    expect(withZero[1]).toBeCloseTo(withDefault[1] ?? 0, 5);
+    expect(withNeg[1]).toBeCloseTo(withDefault[1] ?? 0, 5);
+  });
+
+  it('非表示行の後も累積座標が正しい', () => {
+    const positions = buildRowPositions([15, 0, 20]);
+    expect(positions).toHaveLength(4);
+    // 15pt → 5.292mm, 0pt, 20pt → 7.056mm
+    expect(positions[1]).toBeCloseTo(5.292, 3);
+    expect(positions[2]).toBeCloseTo(5.292, 3); // 非表示なので変わらない
+    expect(positions[3]).toBeCloseTo(12.348, 3);
   });
 });
 
@@ -849,5 +876,44 @@ describe('parseSheet with printArea', () => {
     // 結合セルは 2列×2行分のサイズ
     expect(result.boxes[0]?.rect.position.x).toBe(0);
     expect(result.boxes[0]?.rect.position.y).toBe(0);
+  });
+});
+
+// --- 非表示行列テスト ---
+
+describe('parseSheet with hidden rows/columns', () => {
+  it('非表示行（高さ 0）のセルはボックスを生成しない', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        columnWidths: [8.43, 8.43],
+        rowHeights: [15, 0, 15], // 2行目が非表示
+        cells: [
+          createCell({ address: 'A1', row: 1, col: 1, value: '表示' }),
+          createCell({ address: 'A2', row: 2, col: 1, value: '非表示' }),
+          createCell({ address: 'A3', row: 3, col: 1, value: '表示' }),
+        ],
+      }),
+    );
+
+    // 非表示行のセルはスキップ
+    expect(result.boxes).toHaveLength(2);
+    expect(result.boxes.map((b) => b.content)).toEqual(['表示', '表示']);
+  });
+
+  it('非表示列（幅 0）のセルはボックスを生成しない', () => {
+    const result = parseSheet(
+      createMinimalSheet({
+        columnWidths: [8.43, 0, 8.43], // 2列目が非表示
+        rowHeights: [15],
+        cells: [
+          createCell({ address: 'A1', row: 1, col: 1, value: '表示1' }),
+          createCell({ address: 'B1', row: 1, col: 2, value: '非表示' }),
+          createCell({ address: 'C1', row: 1, col: 3, value: '表示2' }),
+        ],
+      }),
+    );
+
+    expect(result.boxes).toHaveLength(2);
+    expect(result.boxes.map((b) => b.content)).toEqual(['表示1', '表示2']);
   });
 });
