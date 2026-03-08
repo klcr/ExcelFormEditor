@@ -22,7 +22,7 @@ const defaultPaper: PaperDefinition = {
 describe('EditorLayout', () => {
   it('ボックスを含むエディタを描画する', () => {
     const boxes = [makeBox('box-1'), makeBox('box-2', 80, 90, 40, 25)];
-    render(<EditorLayout boxes={boxes} lines={[]} paper={defaultPaper} />);
+    render(<EditorLayout boxes={boxes} paper={defaultPaper} />);
     expect(screen.getByTestId('editor-layout')).toBeInTheDocument();
     expect(screen.getByTestId('editor-canvas')).toBeInTheDocument();
     expect(screen.getByTestId('box-overlay-box-1')).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe('EditorLayout', () => {
 
   it('Undo/Redo ボタンが存在し canUndo/canRedo 状態を反映する', () => {
     const boxes = [makeBox('box-1')];
-    render(<EditorLayout boxes={boxes} lines={[]} paper={defaultPaper} />);
+    render(<EditorLayout boxes={boxes} paper={defaultPaper} />);
     const undoButton = screen.getByTestId('undo-button');
     const redoButton = screen.getByTestId('redo-button');
     expect(undoButton).toBeInTheDocument();
@@ -43,19 +43,19 @@ describe('EditorLayout', () => {
 
   it('PropertyPanel がボックス選択可能な状態で表示される', () => {
     const boxes = [makeBox('box-1')];
-    render(<EditorLayout boxes={boxes} lines={[]} paper={defaultPaper} />);
+    render(<EditorLayout boxes={boxes} paper={defaultPaper} />);
     // PropertyPanel shows empty state when no box selected
     expect(screen.getByText('ボックスを選択してください')).toBeInTheDocument();
   });
 
   it('paper が null のときデフォルトサイズで描画する', () => {
-    render(<EditorLayout boxes={[]} lines={[]} paper={null} />);
+    render(<EditorLayout boxes={[]} paper={null} />);
     const canvas = screen.getByTestId('editor-canvas');
     expect(canvas).toHaveAttribute('viewBox', '0 0 210 297');
   });
 
   it('ツールバーが表示される', () => {
-    render(<EditorLayout boxes={[]} lines={[]} paper={defaultPaper} />);
+    render(<EditorLayout boxes={[]} paper={defaultPaper} />);
     expect(screen.getByTestId('editor-toolbar')).toBeInTheDocument();
     expect(screen.getByTestId('undo-button')).toBeInTheDocument();
     expect(screen.getByTestId('redo-button')).toBeInTheDocument();
@@ -64,32 +64,18 @@ describe('EditorLayout', () => {
 
 describe('EditorLayout mobile', () => {
   it('mobile レイアウトでエディタを描画する', () => {
-    render(
-      <EditorLayout
-        boxes={[makeBox('box-1')]}
-        lines={[]}
-        paper={defaultPaper}
-        layoutMode="mobile"
-      />,
-    );
+    render(<EditorLayout boxes={[makeBox('box-1')]} paper={defaultPaper} layoutMode="mobile" />);
     expect(screen.getByTestId('editor-layout')).toBeInTheDocument();
     expect(screen.getByTestId('editor-canvas')).toBeInTheDocument();
   });
 
   it('mobile でボックス未選択時はプロパティボタン非表示', () => {
-    render(
-      <EditorLayout
-        boxes={[makeBox('box-1')]}
-        lines={[]}
-        paper={defaultPaper}
-        layoutMode="mobile"
-      />,
-    );
+    render(<EditorLayout boxes={[makeBox('box-1')]} paper={defaultPaper} layoutMode="mobile" />);
     expect(screen.queryByTestId('open-property-sheet')).not.toBeInTheDocument();
   });
 
   it('mobile でツールバーが表示される', () => {
-    render(<EditorLayout boxes={[]} lines={[]} paper={defaultPaper} layoutMode="mobile" />);
+    render(<EditorLayout boxes={[]} paper={defaultPaper} layoutMode="mobile" />);
     expect(screen.getByTestId('editor-toolbar')).toBeInTheDocument();
   });
 });

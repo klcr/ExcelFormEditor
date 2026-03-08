@@ -1,13 +1,10 @@
 import type { BoxDefinition } from '@domain/box';
-import { exportAsHtml } from '@domain/export';
-import type { LineDefinition } from '@domain/line';
 import type { PaperDefinition } from '@domain/paper';
 import { PAPER_DIMENSIONS } from '@domain/paper';
 import { useBoxEditor } from '@web/hooks/useBoxEditor';
 import { useKeyboardShortcuts } from '@web/hooks/useKeyboardShortcuts';
 import type { LayoutMode } from '@web/hooks/useLayoutMode';
 import { useSnap } from '@web/hooks/useSnap';
-import { downloadFile } from '@web/utils/downloadFile';
 import { useEffect, useRef, useState } from 'react';
 import { BottomSheet } from '../common/BottomSheet';
 import { MergeAction } from './BoxEditor/MergeAction';
@@ -18,10 +15,8 @@ import { PropertyPanel } from './PropertyPanel/PropertyPanel';
 
 type EditorLayoutProps = {
   readonly boxes: readonly BoxDefinition[];
-  readonly lines: readonly LineDefinition[];
   readonly paper: PaperDefinition | null;
   readonly layoutMode?: LayoutMode;
-  readonly fileName?: string;
   readonly onBoxesChange?: (boxes: readonly BoxDefinition[]) => void;
 };
 
@@ -32,10 +27,8 @@ type EditorLayoutProps = {
  */
 export function EditorLayout({
   boxes: initialBoxes,
-  lines,
   paper,
   layoutMode = 'desktop',
-  fileName = 'template',
   onBoxesChange,
 }: EditorLayoutProps) {
   const snap = useSnap();
@@ -61,20 +54,6 @@ export function EditorLayout({
       deselectAll: actions.deselectAll,
     },
   });
-
-  const handleExport = () => {
-    if (!paper) return;
-    const templateId = fileName.replace(/\.[^.]+$/, '');
-    const html = exportAsHtml({
-      boxes,
-      lines,
-      variables: [],
-      paper,
-      templateId,
-      templateVersion: '1.0.0',
-    });
-    downloadFile(html, `${templateId}.html`, 'text/html');
-  };
 
   const paperWidth = paper
     ? paper.orientation === 'landscape'
@@ -132,14 +111,6 @@ export function EditorLayout({
             onClick={actions.redo}
           >
             ↪
-          </button>
-          <button
-            type="button"
-            data-testid="export-button"
-            disabled={!paper}
-            onClick={handleExport}
-          >
-            Export
           </button>
         </div>
         <div style={{ flex: 1 }}>
@@ -213,9 +184,6 @@ export function EditorLayout({
         </button>
         <button type="button" data-testid="redo-button" disabled={!canRedo} onClick={actions.redo}>
           やり直す
-        </button>
-        <button type="button" data-testid="export-button" disabled={!paper} onClick={handleExport}>
-          エクスポート
         </button>
       </div>
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

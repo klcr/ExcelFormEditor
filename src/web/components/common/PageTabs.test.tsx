@@ -9,7 +9,7 @@ const pages = [
 ];
 
 describe('PageTabs', () => {
-  it('ページが1つの場合は何も表示しない', () => {
+  it('ページが1つで onPageClose なしの場合は何も表示しない', () => {
     const { container } = render(
       <PageTabs
         pages={[{ sheetName: 'Sheet1', pageIndex: 0 }]}
@@ -45,5 +45,53 @@ describe('PageTabs', () => {
 
     fireEvent.click(screen.getByTestId('page-tab-2'));
     expect(onPageSelect).toHaveBeenCalledWith(2);
+  });
+
+  it('onPageClose が渡された場合、閉じボタンを表示する', () => {
+    render(
+      <PageTabs pages={pages} activePageIndex={0} onPageSelect={vi.fn()} onPageClose={vi.fn()} />,
+    );
+
+    expect(screen.getByTestId('page-close-0')).toBeInTheDocument();
+    expect(screen.getByTestId('page-close-1')).toBeInTheDocument();
+    expect(screen.getByTestId('page-close-2')).toBeInTheDocument();
+  });
+
+  it('onPageClose が渡されない場合、閉じボタンを表示しない', () => {
+    render(<PageTabs pages={pages} activePageIndex={0} onPageSelect={vi.fn()} />);
+
+    expect(screen.queryByTestId('page-close-0')).not.toBeInTheDocument();
+  });
+
+  it('閉じボタンクリックで onPageClose が呼ばれ、onPageSelect は呼ばれない', () => {
+    const onPageSelect = vi.fn();
+    const onPageClose = vi.fn();
+
+    render(
+      <PageTabs
+        pages={pages}
+        activePageIndex={0}
+        onPageSelect={onPageSelect}
+        onPageClose={onPageClose}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('page-close-1'));
+    expect(onPageClose).toHaveBeenCalledWith(1);
+    expect(onPageSelect).not.toHaveBeenCalled();
+  });
+
+  it('onPageClose ありの場合、1ページでもタブを表示する', () => {
+    render(
+      <PageTabs
+        pages={[{ sheetName: 'Sheet1', pageIndex: 0 }]}
+        activePageIndex={0}
+        onPageSelect={vi.fn()}
+        onPageClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('page-tabs')).toBeInTheDocument();
+    expect(screen.getByTestId('page-close-0')).toBeInTheDocument();
   });
 });

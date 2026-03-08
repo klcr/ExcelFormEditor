@@ -7,15 +7,17 @@
 
 ## 1. 概要
 
-Excel Form Editor は Excel (.xlsx) で作成された帳票をパースし、Web で利用可能な **HTML + CSS テンプレート** に変換する。出力される HTML は以下の 3 層構造を持つ。
+Excel Form Editor は Excel (.xlsx) で作成された帳票をパースし、Web で利用可能な **HTML + CSS テンプレート** に変換する。1 つの HTML ファイルに **複数ページ** を含むことができる。ユーザーはエクスポート時に出力対象のページをページ単位で選択できる。出力される HTML は以下の 3 層構造を持つ。
 
 | 層 | 要素 | 役割 |
 |----|------|------|
-| 用紙宣言 | `@page` CSS + `<section class="sheet">` | 用紙サイズ・余白・座標系を定義 |
+| 用紙宣言 | `@page` CSS + `<section class="sheet">` | ページごとの用紙サイズ・余白・座標系を定義 |
 | ボックス/線分 | `<div class="box">` / `<div class="line">` | レイアウト要素（ラベル・入力欄・罫線） |
 | マニフェスト | `<script type="application/json" id="template-manifest">` | 変数マッピングとメタデータの JSON |
 
 ## 2. HTML ドキュメント構造
+
+1 つの HTML ファイルに複数の `<section class="sheet">` 要素を含むことができる。各ページは名前付き `@page` ルールで個別の用紙設定を持つ。
 
 ```html
 <!DOCTYPE html>
@@ -24,17 +26,29 @@ Excel Form Editor は Excel (.xlsx) で作成された帳票をパースし、We
   <meta charset="UTF-8">
   <title>{templateId}</title>
   <style>
-    @page { ... }
-    .sheet { ... }
-    .box { ... }
+    @page page0 { size: ...; margin: ...; }
+    .sheet[data-page-index="0"] { page: page0; }
+
+    @page page1 { size: ...; margin: ...; }
+    .sheet[data-page-index="1"] { page: page1; }
+
+    .sheet { page-break-after: always; }
+    .sheet:last-child { page-break-after: auto; }
+    .box { overflow: hidden; }
   </style>
 </head>
 <body>
-  <section class="sheet" data-*="...">
-    <!-- ボックス要素群 -->
+  <!-- ページ 0 -->
+  <section class="sheet" data-page-index="0" data-sheet-name="..." data-*="..."
+           style="position: relative; width: ...mm; height: ...mm; overflow: hidden;">
     <div class="box" ...>...</div>
+    <div class="line" ...></div>
+  </section>
 
-    <!-- 線分要素群 -->
+  <!-- ページ 1 -->
+  <section class="sheet" data-page-index="1" data-sheet-name="..." data-*="..."
+           style="position: relative; width: ...mm; height: ...mm; overflow: hidden;">
+    <div class="box" ...>...</div>
     <div class="line" ...></div>
   </section>
 
@@ -44,6 +58,8 @@ Excel Form Editor は Excel (.xlsx) で作成された帳票をパースし、We
 </body>
 </html>
 ```
+
+> **注**: 単一ページのテンプレートも同じ構造（`@page page0` + `data-page-index="0"`）で出力される。
 
 ## 3. 座標系と単位
 
@@ -81,29 +97,46 @@ Excel Form Editor は Excel (.xlsx) で作成された帳票をパースし、We
 
 ## 4. `@page` CSS ルール
 
-印刷時の用紙設定を定義する。
+ページごとに **名前付き `@page` ルール** を定義し、対応する `.sheet` 要素に `page` プロパティで紐づける。これにより、異なる用紙サイズ・余白を持つ複数ページを 1 つの HTML 内で共存させることができる。
 
 ```css
-@page {
+/* ページ 0 の用紙設定 */
+@page page0 {
   size: {widthMm}mm {heightMm}mm;
   margin: {topMm}mm {rightMm}mm {bottomMm}mm {leftMm}mm;
 }
+.sheet[data-page-index="0"] { page: page0; }
+
+/* ページ 1 の用紙設定 */
+@page page1 {
+  size: {widthMm}mm {heightMm}mm;
+  margin: {topMm}mm {rightMm}mm {bottomMm}mm {leftMm}mm;
+}
+.sheet[data-page-index="1"] { page: page1; }
+
+/* 改ページ制御 */
+.sheet {
+  page-break-after: always;
+}
+.sheet:last-child {
+  page-break-after: auto;
+}
 ```
 
+- `@page page{N}`: ページインデックスに基づく名前付きページルール（`page0`, `page1`, ...）
 - `size`: 用紙の物理サイズ（orientation 適用後の値）
 - `margin`: 用紙余白。元データは Excel のインチ単位の余白を `× 25.4` で mm 変換したもの
+- `page-break-after: always`: 各ページの後に改ページを挿入（最後のページを除く）
 
 ## 5. `<section class="sheet">` — 用紙コンテナ
 
 ### 5.1 CSS プロパティ
 
+マルチページ出力では `.sheet` のサイズは各 `<section>` の `style` 属性にインラインで指定される（ページごとに用紙サイズが異なる可能性があるため）。
+
 ```css
-.sheet {
-  position: relative;
-  width: {printableWidth}mm;
-  height: {printableHeight}mm;
-  overflow: hidden;
-}
+/* インラインスタイル */
+style="position: relative; width: {printableWidth}mm; height: {printableHeight}mm; overflow: hidden;"
 ```
 
 `printableWidth` / `printableHeight` は用紙サイズから上下左右の余白を差し引いた値。
@@ -112,6 +145,8 @@ Excel Form Editor は Excel (.xlsx) で作成された帳票をパースし、We
 
 | 属性 | 型 | 例 | 説明 |
 |------|----|----|------|
+| `data-page-index` | number | `"0"` | ページインデックス（0始まり） |
+| `data-sheet-name` | string | `"Sheet1"` | 元の Excel シート名 |
 | `data-template-id` | string | `"invoice-001"` | テンプレート識別子 |
 | `data-template-version` | string | `"1.0.0"` | テンプレートバージョン |
 | `data-paper-size` | enum | `"A4"` | 用紙サイズ (`A3` / `A4` / `A5`) |
@@ -325,40 +360,48 @@ const manifest = JSON.parse(el.textContent);
 
 ### 8.2 スキーマ
 
+マルチページ対応のマニフェストでは、トップレベルの `paper` / `fields` の代わりに `pages` 配列を使用する。各ページが個別の用紙情報とフィールド一覧を持つ。
+
 ```json
 {
   "templateId": "string",
   "version": "string",
-  "paper": {
-    "size": "A3 | A4 | A5",
-    "orientation": "portrait | landscape",
-    "widthMm": 210,
-    "heightMm": 297,
-    "margins": {
-      "top": 25.4,
-      "right": 19.05,
-      "bottom": 25.4,
-      "left": 19.05
-    }
-  },
-  "fields": [
+  "pages": [
     {
-      "variableId": "string",
-      "variableName": "string",
-      "variableType": "string | number | date | boolean",
-      "boxId": "string",
-      "region": {
-        "x": 0,
-        "y": 0,
-        "width": 50,
-        "height": 10
+      "pageIndex": 0,
+      "sheetName": "Sheet1",
+      "paper": {
+        "size": "A3 | A4 | A5",
+        "orientation": "portrait | landscape",
+        "widthMm": 210,
+        "heightMm": 297,
+        "margins": {
+          "top": 25.4,
+          "right": 19.05,
+          "bottom": 25.4,
+          "left": 19.05
+        }
       },
-      "absoluteRegion": {
-        "x": 19.05,
-        "y": 25.4,
-        "width": 50,
-        "height": 10
-      }
+      "fields": [
+        {
+          "variableId": "string",
+          "variableName": "string",
+          "variableType": "string | number | date | boolean",
+          "boxId": "string",
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 50,
+            "height": 10
+          },
+          "absoluteRegion": {
+            "x": 19.05,
+            "y": 25.4,
+            "width": 50,
+            "height": 10
+          }
+        }
+      ]
     }
   ],
   "interface": "interface TemplateData {\n  invoiceNumber: string;\n  totalAmount: number;\n}\n"
@@ -371,11 +414,19 @@ const manifest = JSON.parse(el.textContent);
 |-----------|-----|------|
 | `templateId` | string | テンプレート識別子 |
 | `version` | string | テンプレートバージョン (semver) |
-| `paper` | object | 用紙情報（サイズ・方向・余白、すべて mm 単位） |
-| `fields` | array | 変数バインディングの一覧 |
-| `interface` | string | TypeScript インターフェース定義文字列 |
+| `pages` | array | ページ単位のマニフェストエントリ一覧 |
+| `interface` | string | 全ページの変数を統合した TypeScript インターフェース定義文字列 |
 
-### 8.4 `fields` 配列の要素
+### 8.4 `pages` 配列の要素（`PageManifestEntry`）
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `pageIndex` | number | ページインデックス（0始まり、HTML の `data-page-index` と一致） |
+| `sheetName` | string | 元の Excel シート名 |
+| `paper` | object | このページの用紙情報（サイズ・方向・余白、すべて mm 単位） |
+| `fields` | array | このページの変数バインディング一覧 |
+
+### 8.5 `fields` 配列の要素
 
 | フィールド | 型 | 説明 |
 |-----------|-----|------|
@@ -386,7 +437,7 @@ const manifest = JSON.parse(el.textContent);
 | `region` | object | 印刷可能領域内の相対座標 (mm) |
 | `absoluteRegion` | object | 用紙全体に対する絶対座標 (mm) |
 
-### 8.5 `region` と `absoluteRegion` の違い
+### 8.6 `region` と `absoluteRegion` の違い
 
 ```
 absoluteRegion.x = region.x + margin-left
@@ -397,7 +448,7 @@ width, height は同一
 - `region`: 印刷可能領域の左上を原点とした座標（HTML 内の CSS 座標と一致）
 - `absoluteRegion`: 用紙物理エッジの左上を原点とした座標（PDF 生成等で有用）
 
-### 8.6 `interface` フィールド
+### 8.7 `interface` フィールド
 
 変数定義から自動生成された TypeScript インターフェース文字列。外部システムで型安全なデータバインディングを行う際の参考情報。
 
@@ -429,7 +480,8 @@ width, height は同一
 
 1. HTML ファイルをパースする
 2. `<script id="template-manifest">` から JSON マニフェストを取得する
-3. マニフェストの `fields` 配列から変数の一覧と型情報を取得する
+3. マニフェストの `pages` 配列からページ一覧を取得する
+4. 各ページの `fields` 配列から変数の一覧と型情報を取得する
 
 ### 10.2 変数の差し替え（レンダリング）
 
@@ -439,20 +491,32 @@ width, height は同一
 4. `data-type` 属性に基づき、必要に応じて値のフォーマットを行う
 
 ```javascript
-// 差し替え例
+// 差し替え例（全ページの field を一括置換）
 document.querySelectorAll('.box[data-role="field"]').forEach(el => {
   const varName = el.dataset.variable;
   const varType = el.dataset.type;
   const value = templateData[varName];
   el.textContent = formatValue(value, varType);
 });
+
+// ページ単位で処理する場合
+document.querySelectorAll('.sheet').forEach(sheet => {
+  const pageIndex = sheet.dataset.pageIndex;
+  const pageData = getPageData(pageIndex);
+  sheet.querySelectorAll('.box[data-role="field"]').forEach(el => {
+    const varName = el.dataset.variable;
+    el.textContent = pageData[varName];
+  });
+});
 ```
 
 ### 10.3 印刷 / PDF 出力
 
-- `@page` CSS ルールが用紙サイズと余白を定義しているため、`window.print()` またはヘッドレスブラウザで直接 PDF 化が可能
+- 名前付き `@page` CSS ルールがページごとの用紙サイズと余白を定義しているため、`window.print()` またはヘッドレスブラウザで直接 PDF 化が可能
+- `page-break-after: always` により各ページが自動的に改ページされる
 - `.sheet` 要素のサイズが印刷可能領域に一致しているため、追加のスケーリングは不要
 - すべての座標が `mm` 単位のため、印刷解像度に依存しない
+- 異なる用紙サイズのページが混在しても、名前付き `@page` ルールにより正しく印刷される
 
 ### 10.4 座標を使った位置特定
 
@@ -463,6 +527,8 @@ document.querySelectorAll('.box[data-role="field"]').forEach(el => {
 
 ## 11. 完全な出力例
 
+2 ページ構成のテンプレート例（1 ページ目: A4 縦の請求書、2 ページ目: A4 縦の明細）。
+
 ```html
 <!DOCTYPE html>
 <html lang="ja">
@@ -470,15 +536,21 @@ document.querySelectorAll('.box[data-role="field"]').forEach(el => {
 <meta charset="UTF-8">
 <title>invoice-001</title>
 <style>
-  @page {
+  @page page0 {
     size: 210mm 297mm;
     margin: 25.4mm 19.1mm 25.4mm 19.1mm;
   }
+  .sheet[data-page-index="0"] { page: page0; }
+  @page page1 {
+    size: 210mm 297mm;
+    margin: 25.4mm 19.1mm 25.4mm 19.1mm;
+  }
+  .sheet[data-page-index="1"] { page: page1; }
   .sheet {
-    position: relative;
-    width: 171.9mm;
-    height: 246.2mm;
-    overflow: hidden;
+    page-break-after: always;
+  }
+  .sheet:last-child {
+    page-break-after: auto;
   }
   .box {
     overflow: hidden;
@@ -487,6 +559,8 @@ document.querySelectorAll('.box[data-role="field"]').forEach(el => {
 </head>
 <body>
 <section class="sheet"
+  data-page-index="0"
+  data-sheet-name="請求書"
   data-template-id="invoice-001"
   data-template-version="1.0.0"
   data-paper-size="A4"
@@ -497,10 +571,11 @@ document.querySelectorAll('.box[data-role="field"]').forEach(el => {
   data-margin-right-mm="19.1"
   data-margin-bottom-mm="25.4"
   data-margin-left-mm="19.1"
-  data-origin="printable-area">
+  data-origin="printable-area"
+  style="position: relative; width: 171.9mm; height: 246.2mm; overflow: hidden;">
 
   <div class="box"
-       data-box-id="box-1"
+       data-box-id="p0-box-1"
        data-role="label"
        data-x-mm="10"
        data-y-mm="5"
@@ -509,7 +584,7 @@ document.querySelectorAll('.box[data-role="field"]').forEach(el => {
        style="position: absolute; left: 10mm; top: 5mm; width: 40mm; height: 8mm; font-family: 'MS Gothic'; font-size: 3.53mm; color: #000000; display: flex; align-items: flex-start; text-align: left; box-sizing: border-box;">請求書番号</div>
 
   <div class="box"
-       data-box-id="box-2"
+       data-box-id="p0-box-2"
        data-role="field"
        data-x-mm="50"
        data-y-mm="5"
@@ -520,7 +595,7 @@ document.querySelectorAll('.box[data-role="field"]').forEach(el => {
        style="position: absolute; left: 50mm; top: 5mm; width: 60mm; height: 8mm; border-bottom: 0.3mm solid #000000; font-family: 'MS Gothic'; font-size: 3.53mm; color: #000000; display: flex; align-items: flex-start; text-align: left; box-sizing: border-box;">{{invoiceNumber}}</div>
 
   <div class="line"
-       data-line-id="line-1"
+       data-line-id="p0-line-1"
        data-x1-mm="0" data-y1-mm="20"
        data-x2-mm="171.9" data-y2-mm="20"
        data-stroke-width-mm="0.3"
@@ -528,30 +603,80 @@ document.querySelectorAll('.box[data-role="field"]').forEach(el => {
 
 </section>
 
+<section class="sheet"
+  data-page-index="1"
+  data-sheet-name="明細"
+  data-template-id="invoice-001"
+  data-template-version="1.0.0"
+  data-paper-size="A4"
+  data-orientation="portrait"
+  data-width-mm="210"
+  data-height-mm="297"
+  data-margin-top-mm="25.4"
+  data-margin-right-mm="19.1"
+  data-margin-bottom-mm="25.4"
+  data-margin-left-mm="19.1"
+  data-origin="printable-area"
+  style="position: relative; width: 171.9mm; height: 246.2mm; overflow: hidden;">
+
+  <div class="box"
+       data-box-id="p1-box-1"
+       data-role="label"
+       data-x-mm="10"
+       data-y-mm="5"
+       data-w-mm="40"
+       data-h-mm="8"
+       style="position: absolute; left: 10mm; top: 5mm; width: 40mm; height: 8mm; font-family: 'MS Gothic'; font-size: 3.53mm; color: #000000; display: flex; align-items: flex-start; text-align: left; box-sizing: border-box;">明細一覧</div>
+
+</section>
+
 <script type="application/json" id="template-manifest">
 {
   "templateId": "invoice-001",
   "version": "1.0.0",
-  "paper": {
-    "size": "A4",
-    "orientation": "portrait",
-    "widthMm": 210,
-    "heightMm": 297,
-    "margins": {
-      "top": 25.4,
-      "right": 19.05,
-      "bottom": 25.4,
-      "left": 19.05
-    }
-  },
-  "fields": [
+  "pages": [
     {
-      "variableId": "var-1",
-      "variableName": "invoiceNumber",
-      "variableType": "string",
-      "boxId": "box-2",
-      "region": { "x": 50, "y": 5, "width": 60, "height": 8 },
-      "absoluteRegion": { "x": 69.05, "y": 30.4, "width": 60, "height": 8 }
+      "pageIndex": 0,
+      "sheetName": "請求書",
+      "paper": {
+        "size": "A4",
+        "orientation": "portrait",
+        "widthMm": 210,
+        "heightMm": 297,
+        "margins": {
+          "top": 25.4,
+          "right": 19.05,
+          "bottom": 25.4,
+          "left": 19.05
+        }
+      },
+      "fields": [
+        {
+          "variableId": "var-1",
+          "variableName": "invoiceNumber",
+          "variableType": "string",
+          "boxId": "p0-box-2",
+          "region": { "x": 50, "y": 5, "width": 60, "height": 8 },
+          "absoluteRegion": { "x": 69.05, "y": 30.4, "width": 60, "height": 8 }
+        }
+      ]
+    },
+    {
+      "pageIndex": 1,
+      "sheetName": "明細",
+      "paper": {
+        "size": "A4",
+        "orientation": "portrait",
+        "widthMm": 210,
+        "heightMm": 297,
+        "margins": {
+          "top": 25.4,
+          "right": 19.05,
+          "bottom": 25.4,
+          "left": 19.05
+        }
+      },
+      "fields": []
     }
   ],
   "interface": "interface TemplateData {\n  invoiceNumber: string;\n}\n"
