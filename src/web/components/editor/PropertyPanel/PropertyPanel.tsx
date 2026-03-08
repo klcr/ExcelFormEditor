@@ -6,12 +6,13 @@ import type {
   BoxFont,
   BoxPadding,
 } from '@domain/box';
-import type { VariableDefinition } from '@domain/variable';
+import type { VariableDefinition, VariableType } from '@domain/variable';
 import { BorderSection } from './BorderSection';
 import { FillSection } from './FillSection';
 import { PaddingSection } from './PaddingSection';
 import { PositionSizeSection } from './PositionSizeSection';
 import styles from './PropertyPanel.module.css';
+import { SequentialVariableSection } from './SequentialVariableSection';
 import { TextStyleSection } from './TextStyleSection';
 import { VariableBindingSection } from './VariableBindingSection';
 
@@ -24,6 +25,12 @@ type PropertyPanelProps = {
   readonly variables?: readonly VariableDefinition[];
   readonly onAddVariable?: (variable: Omit<VariableDefinition, 'id'>) => void;
   readonly onRemoveVariable?: (variableId: string) => void;
+  readonly onAssignSequentialVariables?: (params: {
+    baseName: string;
+    startIndex: number;
+    type: VariableType;
+    sortedBoxIds: readonly string[];
+  }) => void;
 };
 
 export function PropertyPanel({
@@ -35,6 +42,7 @@ export function PropertyPanel({
   variables = [],
   onAddVariable,
   onRemoveVariable,
+  onAssignSequentialVariables,
 }: PropertyPanelProps) {
   if (selectedBoxIds.length === 0) {
     return (
@@ -48,6 +56,14 @@ export function PropertyPanel({
     return (
       <div className={styles.panel}>
         <p className={styles.emptyState}>{selectedBoxIds.length}個のボックスを選択中</p>
+        {onAssignSequentialVariables && (
+          <SequentialVariableSection
+            selectedBoxIds={selectedBoxIds}
+            boxes={boxes}
+            existingVariables={variables}
+            onAssign={onAssignSequentialVariables}
+          />
+        )}
       </div>
     );
   }

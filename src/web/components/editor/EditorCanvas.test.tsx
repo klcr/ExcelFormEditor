@@ -24,6 +24,7 @@ function renderCanvas(overrides?: {
   isDragging?: boolean;
   activeGuides?: SnapGuideResult;
   onSelectBox?: ReturnType<typeof vi.fn>;
+  onToggleBoxSelection?: ReturnType<typeof vi.fn>;
   onDeselectAll?: ReturnType<typeof vi.fn>;
 }) {
   const props = {
@@ -32,6 +33,7 @@ function renderCanvas(overrides?: {
     isDragging: overrides?.isDragging ?? false,
     activeGuides: overrides?.activeGuides ?? EMPTY_GUIDES,
     onSelectBox: overrides?.onSelectBox ?? vi.fn(),
+    onToggleBoxSelection: overrides?.onToggleBoxSelection ?? vi.fn(),
     onDeselectAll: overrides?.onDeselectAll ?? vi.fn(),
     paperWidth: 210,
     paperHeight: 297,
@@ -83,6 +85,15 @@ describe('EditorCanvas', () => {
     expect(overlay).toHaveAttribute('stroke', '#2196F3');
     const overlay2 = screen.getByTestId('box-overlay-box-2');
     expect(overlay2).toHaveAttribute('stroke', 'transparent');
+  });
+
+  it('Ctrl+クリックで onToggleBoxSelection を呼ぶ', () => {
+    const onToggleBoxSelection = vi.fn();
+    const onSelectBox = vi.fn();
+    renderCanvas({ onSelectBox, onToggleBoxSelection });
+    fireEvent.click(screen.getByTestId('box-overlay-box-1'), { ctrlKey: true });
+    expect(onToggleBoxSelection).toHaveBeenCalledWith('box-1');
+    expect(onSelectBox).not.toHaveBeenCalled();
   });
 
   it('viewBox が用紙サイズに一致する', () => {

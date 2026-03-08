@@ -1,11 +1,14 @@
 import type { BoxDefinition } from '@domain/box';
 import type { PaperDefinition } from '@domain/paper';
 import { PAPER_DIMENSIONS } from '@domain/paper';
+import type { VariableType } from '@domain/variable';
+import { generateSequentialVariables } from '@domain/variable';
 import { useBoxEditor } from '@web/hooks/useBoxEditor';
 import { useKeyboardShortcuts } from '@web/hooks/useKeyboardShortcuts';
 import type { LayoutMode } from '@web/hooks/useLayoutMode';
 import { useSnap } from '@web/hooks/useSnap';
-import { useEffect, useRef, useState } from 'react';
+import { useVariableEditor } from '@web/hooks/useVariableEditor';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BottomSheet } from '../common/BottomSheet';
 import { MergeAction } from './BoxEditor/MergeAction';
 import { SplitAction } from './BoxEditor/SplitAction';
@@ -34,7 +37,29 @@ export function EditorLayout({
   const snap = useSnap();
   const { selectedBoxIds, boxes, isDragging, canUndo, canRedo, activeGuides, actions } =
     useBoxEditor(initialBoxes, { snap });
+  const { variables, actions: variableActions } = useVariableEditor();
   const [isPropertySheetOpen, setIsPropertySheetOpen] = useState(false);
+
+  const handleAssignSequentialVariables = useCallback(
+    (params: {
+      baseName: string;
+      startIndex: number;
+      type: VariableType;
+      sortedBoxIds: readonly string[];
+    }) => {
+      const result = generateSequentialVariables({
+        baseName: params.baseName,
+        startIndex: params.startIndex,
+        type: params.type,
+        boxIds: params.sortedBoxIds,
+        existingVariables: variables,
+      });
+      if (result.ok) {
+        variableActions.addVariables(result.variables);
+      }
+    },
+    [variables, variableActions],
+  );
 
   // Notify parent of box changes
   const isInitialMount = useRef(true);
@@ -120,6 +145,7 @@ export function EditorLayout({
             isDragging={isDragging}
             activeGuides={activeGuides}
             onSelectBox={actions.selectBox}
+            onToggleBoxSelection={actions.toggleBoxSelection}
             onDeselectAll={actions.deselectAll}
             paperWidth={paperWidth}
             paperHeight={paperHeight}
@@ -156,6 +182,10 @@ export function EditorLayout({
             onMove={actions.moveSelectedBoxes}
             onResize={actions.resizeBox}
             onUpdateBox={actions.updateBox}
+            variables={variables}
+            onAddVariable={variableActions.addVariable}
+            onRemoveVariable={variableActions.removeVariable}
+            onAssignSequentialVariables={handleAssignSequentialVariables}
           />
           <CssPreview boxes={boxes} selectedBoxIds={selectedBoxIds} />
         </BottomSheet>
@@ -194,6 +224,7 @@ export function EditorLayout({
             isDragging={isDragging}
             activeGuides={activeGuides}
             onSelectBox={actions.selectBox}
+            onToggleBoxSelection={actions.toggleBoxSelection}
             onDeselectAll={actions.deselectAll}
             paperWidth={paperWidth}
             paperHeight={paperHeight}
@@ -206,6 +237,10 @@ export function EditorLayout({
             onMove={actions.moveSelectedBoxes}
             onResize={actions.resizeBox}
             onUpdateBox={actions.updateBox}
+            variables={variables}
+            onAddVariable={variableActions.addVariable}
+            onRemoveVariable={variableActions.removeVariable}
+            onAssignSequentialVariables={handleAssignSequentialVariables}
           />
           <CssPreview boxes={boxes} selectedBoxIds={selectedBoxIds} />
         </div>

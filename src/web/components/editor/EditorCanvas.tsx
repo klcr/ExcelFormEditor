@@ -9,6 +9,7 @@ type EditorCanvasProps = {
   readonly isDragging: boolean;
   readonly activeGuides: SnapGuideResult;
   readonly onSelectBox: (id: string) => void;
+  readonly onToggleBoxSelection: (id: string) => void;
   readonly onDeselectAll: () => void;
   readonly paperWidth: number;
   readonly paperHeight: number;
@@ -24,6 +25,7 @@ export function EditorCanvas({
   isDragging,
   activeGuides,
   onSelectBox,
+  onToggleBoxSelection,
   onDeselectAll,
   paperWidth,
   paperHeight,
@@ -38,8 +40,12 @@ export function EditorCanvas({
     }
   };
 
-  const handleBoxSelect = (id: string, _multiSelect: boolean) => {
-    onSelectBox(id);
+  const handleBoxSelect = (id: string, multiSelect: boolean) => {
+    if (multiSelect) {
+      onToggleBoxSelection(id);
+    } else {
+      onSelectBox(id);
+    }
   };
 
   return (
