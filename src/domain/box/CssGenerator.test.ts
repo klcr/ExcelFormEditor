@@ -177,6 +177,8 @@ describe('generateBoxCss', () => {
       { vertical: 'top' as const, expected: 'flex-start' },
       { vertical: 'middle' as const, expected: 'center' },
       { vertical: 'bottom' as const, expected: 'flex-end' },
+      { vertical: 'justify' as const, expected: 'stretch' },
+      { vertical: 'distributed' as const, expected: 'stretch' },
     ];
 
     for (const { vertical, expected } of alignments) {
@@ -189,5 +191,99 @@ describe('generateBoxCss', () => {
       const css = generateBoxCss(box);
       expect(css).toContain(`align-items: ${expected};`);
     }
+  });
+
+  it('追加ボーダースタイルが正しいCSSにマッピングされる', () => {
+    const additionalStyles = [
+      { style: 'dashDot' as const, expectedStyle: 'dashed', expectedWidth: '0.3mm' },
+      { style: 'dashDotDot' as const, expectedStyle: 'dashed', expectedWidth: '0.3mm' },
+      { style: 'mediumDashed' as const, expectedStyle: 'solid', expectedWidth: '0.7mm' },
+      { style: 'mediumDashDot' as const, expectedStyle: 'solid', expectedWidth: '0.7mm' },
+      { style: 'mediumDashDotDot' as const, expectedStyle: 'solid', expectedWidth: '0.7mm' },
+      { style: 'slantDashDot' as const, expectedStyle: 'solid', expectedWidth: '0.7mm' },
+    ];
+
+    for (const { style, expectedStyle, expectedWidth } of additionalStyles) {
+      const box = createBox({
+        id: `test-border-${style}`,
+        rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+        border: { top: { style, color: '000000' } },
+      });
+
+      const css = generateBoxCss(box);
+      expect(css).toContain(`border-top: ${expectedWidth} ${expectedStyle} #000000;`);
+    }
+  });
+
+  it('下線のCSSを生成する', () => {
+    const box = createBox({
+      id: 'test-underline',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      font: { underline: 'single' },
+    });
+    const css = generateBoxCss(box);
+    expect(css).toContain('text-decoration: underline;');
+  });
+
+  it('取消線のCSSを生成する', () => {
+    const box = createBox({
+      id: 'test-strike',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      font: { strikethrough: true },
+    });
+    const css = generateBoxCss(box);
+    expect(css).toContain('text-decoration: line-through;');
+  });
+
+  it('下線と取消線を同時に生成する', () => {
+    const box = createBox({
+      id: 'test-both',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      font: { underline: 'single', strikethrough: true },
+    });
+    const css = generateBoxCss(box);
+    expect(css).toContain('text-decoration: underline line-through;');
+  });
+
+  it('textRotation=255 で縦書きCSSを生成する', () => {
+    const box = createBox({
+      id: 'test-vertical',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      alignment: { textRotation: 255 },
+    });
+    const css = generateBoxCss(box);
+    expect(css).toContain('writing-mode: vertical-rl;');
+    expect(css).toContain('text-orientation: upright;');
+  });
+
+  it('textRotation=45 で回転CSSを生成する', () => {
+    const box = createBox({
+      id: 'test-rotate',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      alignment: { textRotation: 45 },
+    });
+    const css = generateBoxCss(box);
+    expect(css).toContain('transform: rotate(-45deg);');
+  });
+
+  it('shrinkToFit のCSSを生成する', () => {
+    const box = createBox({
+      id: 'test-shrink',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      alignment: { shrinkToFit: true },
+    });
+    const css = generateBoxCss(box);
+    expect(css).toContain('overflow: hidden;');
+    expect(css).toContain('white-space: nowrap;');
+  });
+
+  it('distributed水平配置がjustifyにマッピングされる', () => {
+    const box = createBox({
+      id: 'test-distributed',
+      rect: { position: { x: 0, y: 0 }, size: { width: 50, height: 10 } },
+      alignment: { horizontal: 'distributed' },
+    });
+    const css = generateBoxCss(box);
+    expect(css).toContain('text-align: justify;');
   });
 });

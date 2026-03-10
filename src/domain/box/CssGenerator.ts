@@ -14,14 +14,18 @@ function mapBorderStyle(style: BorderStyle): string {
   switch (style) {
     case 'thin':
     case 'hair':
-      return 'solid';
     case 'medium':
-      return 'solid';
     case 'thick':
+    case 'mediumDashed':
+    case 'mediumDashDot':
+    case 'mediumDashDotDot':
+    case 'slantDashDot':
       return 'solid';
     case 'dotted':
       return 'dotted';
     case 'dashed':
+    case 'dashDot':
+    case 'dashDotDot':
       return 'dashed';
     case 'double':
       return 'double';
@@ -34,17 +38,20 @@ function mapBorderWidth(style: BorderStyle): string {
     case 'hair':
       return '0.1mm';
     case 'thin':
+    case 'dotted':
+    case 'dashed':
+    case 'dashDot':
+    case 'dashDotDot':
       return '0.3mm';
     case 'medium':
+    case 'double':
+    case 'mediumDashed':
+    case 'mediumDashDot':
+    case 'mediumDashDotDot':
+    case 'slantDashDot':
       return '0.7mm';
     case 'thick':
       return '1.2mm';
-    case 'dotted':
-      return '0.3mm';
-    case 'dashed':
-      return '0.3mm';
-    case 'double':
-      return '0.7mm';
   }
 }
 
@@ -70,12 +77,20 @@ function mapVerticalAlignment(vertical: VerticalAlignment): string {
       return 'center';
     case 'bottom':
       return 'flex-end';
+    case 'justify':
+    case 'distributed':
+      return 'stretch';
   }
 }
 
 /** HorizontalAlignment → CSS text-align/justify-content マッピング */
 function mapHorizontalAlignment(horizontal: HorizontalAlignment): string {
-  return horizontal;
+  switch (horizontal) {
+    case 'distributed':
+      return 'justify';
+    default:
+      return horizontal;
+  }
 }
 
 /** BoxDefinition から CSS 文字列を生成する */
@@ -113,6 +128,14 @@ export function generateBoxCss(box: BoxDefinition): string {
   if (box.font.italic) {
     lines.push('font-style: italic;');
   }
+  if (box.font.underline) {
+    lines.push('text-decoration: underline;');
+  }
+  if (box.font.strikethrough) {
+    lines.push(
+      `text-decoration: ${box.font.underline ? 'underline line-through' : 'line-through'};`,
+    );
+  }
   lines.push(`color: ${toCssColor(box.font.color)};`);
 
   // Fill
@@ -128,6 +151,29 @@ export function generateBoxCss(box: BoxDefinition): string {
   // Wrap text
   if (box.alignment.wrapText) {
     lines.push('word-wrap: break-word;');
+  }
+
+  // Text rotation
+  if (box.alignment.textRotation !== undefined) {
+    if (box.alignment.textRotation === 255) {
+      // 縦書き（1文字ずつ縦に配置）
+      lines.push('writing-mode: vertical-rl;');
+      lines.push('text-orientation: upright;');
+    } else if (box.alignment.textRotation > 0) {
+      // OOXML: 1-180 → CSS: 正の値は反時計回り (1-90)、91-180 は時計回り (-1 to -90)
+      const deg =
+        box.alignment.textRotation <= 90
+          ? -box.alignment.textRotation
+          : box.alignment.textRotation - 90;
+      lines.push(`transform: rotate(${deg}deg);`);
+    }
+  }
+
+  // Shrink to fit
+  if (box.alignment.shrinkToFit) {
+    lines.push('overflow: hidden;');
+    lines.push('text-overflow: clip;');
+    lines.push('white-space: nowrap;');
   }
 
   // Padding

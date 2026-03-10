@@ -80,12 +80,21 @@ function parseFonts(fontsNode: unknown, palette?: ThemeColorPalette): FontEntry[
 function parseSingleFont(node: unknown, palette?: ThemeColorPalette): FontEntry {
   if (!isObj(node)) return {};
   const o = node as Record<string, unknown>;
+  const underlineNode = o.u;
+  let underline: string | undefined;
+  if (underlineNode !== undefined) {
+    // <u/> = single, <u val="double"/> = double, etc.
+    const val = isObj(underlineNode) ? attrStr(underlineNode, '@_val') : undefined;
+    underline = val ?? 'single';
+  }
   return {
     name: attrStr(o.name, '@_val') ?? textStr(o.name),
     size: attrNum(o.sz, '@_val'),
     bold: 'b' in o ? true : undefined,
     italic: 'i' in o ? true : undefined,
     color: extractColor(o.color, palette),
+    underline,
+    strikethrough: 'strike' in o ? true : undefined,
   };
 }
 
@@ -161,19 +170,29 @@ function parseSingleXf(node: unknown): XfEntry {
   };
 }
 
-function parseAlignment(
-  node: unknown,
-): { horizontal?: string; vertical?: string; wrapText?: boolean } | undefined {
+function parseAlignment(node: unknown):
+  | {
+      horizontal?: string;
+      vertical?: string;
+      wrapText?: boolean;
+      textRotation?: number;
+      shrinkToFit?: boolean;
+    }
+  | undefined {
   if (!isObj(node)) return undefined;
   const o = node as Record<string, unknown>;
   const h = attrStr(o, '@_horizontal');
   const v = attrStr(o, '@_vertical');
   const w = toBool(o['@_wrapText']);
-  if (!h && !v && !w) return undefined;
+  const tr = attrNum(o, '@_textRotation');
+  const sf = toBool(o['@_shrinkToFit']);
+  if (!h && !v && !w && tr === undefined && !sf) return undefined;
   return {
     ...(h ? { horizontal: h } : {}),
     ...(v ? { vertical: v } : {}),
     ...(w ? { wrapText: w } : {}),
+    ...(tr !== undefined ? { textRotation: tr } : {}),
+    ...(sf ? { shrinkToFit: sf } : {}),
   };
 }
 
@@ -288,7 +307,7 @@ function toBool(v: unknown): boolean | undefined {
 }
 
 function hasFontData(f: FontEntry): boolean {
-  return !!(f.name || f.size || f.bold || f.italic || f.color);
+  return !!(f.name || f.size || f.bold || f.italic || f.color || f.underline || f.strikethrough);
 }
 
 function hasBorderData(b: BorderEntry): boolean {

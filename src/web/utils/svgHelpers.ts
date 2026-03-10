@@ -6,17 +6,20 @@ export function borderStyleToStrokeWidth(style: BorderStyle): number {
     case 'hair':
       return 0.1;
     case 'thin':
+    case 'dotted':
+    case 'dashed':
+    case 'dashDot':
+    case 'dashDotDot':
       return 0.2;
     case 'medium':
+    case 'double':
+    case 'mediumDashed':
+    case 'mediumDashDot':
+    case 'mediumDashDotDot':
+    case 'slantDashDot':
       return 0.4;
     case 'thick':
       return 0.7;
-    case 'dotted':
-      return 0.2;
-    case 'dashed':
-      return 0.2;
-    case 'double':
-      return 0.4;
     default:
       return 0.2;
   }
@@ -28,7 +31,15 @@ export function borderStyleToStrokeDasharray(style: BorderStyle): string | undef
     case 'dotted':
       return '0.3 0.3';
     case 'dashed':
+    case 'mediumDashed':
       return '1 0.5';
+    case 'dashDot':
+    case 'mediumDashDot':
+    case 'slantDashDot':
+      return '1 0.3 0.3 0.3';
+    case 'dashDotDot':
+    case 'mediumDashDotDot':
+      return '1 0.3 0.3 0.3 0.3 0.3';
     default:
       return undefined;
   }

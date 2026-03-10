@@ -252,13 +252,14 @@ function parsePageSetup(node: unknown, fitToPage: boolean | undefined): RawPageS
 function parseMargins(node: unknown): Margins | null {
   if (!isObj(node)) return null;
   const o = node as Record<string, unknown>;
+  // OOXML デフォルト値: top/bottom=0.75", left/right=0.7", header/footer=0.3"
   return {
-    top: toNumOr(o['@_top'], 0),
-    bottom: toNumOr(o['@_bottom'], 0),
-    left: toNumOr(o['@_left'], 0),
-    right: toNumOr(o['@_right'], 0),
-    header: toNumOr(o['@_header'], 0),
-    footer: toNumOr(o['@_footer'], 0),
+    top: toNumOr(o['@_top'], 0.75),
+    bottom: toNumOr(o['@_bottom'], 0.75),
+    left: toNumOr(o['@_left'], 0.7),
+    right: toNumOr(o['@_right'], 0.7),
+    header: toNumOr(o['@_header'], 0.3),
+    footer: toNumOr(o['@_footer'], 0.3),
   };
 }
 

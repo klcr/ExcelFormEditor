@@ -637,7 +637,7 @@ describe('parseSheet', () => {
             col: 1,
             value: '',
             style: {
-              border: { top: { style: 'slantDashDot', color: '000000' } },
+              border: { top: { style: 'unknownStyle', color: '000000' } },
             },
           }),
         ],
@@ -645,6 +645,35 @@ describe('parseSheet', () => {
     );
 
     expect(result.boxes[0]?.border.top?.style).toBe('thin');
+  });
+
+  it('OOXML 追加ボーダースタイルが正しくパースされる', () => {
+    const additionalStyles = [
+      'dashDot',
+      'dashDotDot',
+      'mediumDashed',
+      'mediumDashDot',
+      'mediumDashDotDot',
+      'slantDashDot',
+    ];
+    for (const borderStyle of additionalStyles) {
+      const result = parseSheet(
+        createMinimalSheet({
+          cells: [
+            createCell({
+              address: 'A1',
+              row: 1,
+              col: 1,
+              value: '',
+              style: {
+                border: { top: { style: borderStyle, color: '000000' } },
+              },
+            }),
+          ],
+        }),
+      );
+      expect(result.boxes[0]?.border.top?.style).toBe(borderStyle);
+    }
   });
 
   it('範囲外セルは無視される', () => {
