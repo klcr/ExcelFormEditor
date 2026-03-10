@@ -1,7 +1,9 @@
 import type { BoxDefinition } from '@domain/box';
 import type { LineDefinition } from '@domain/line';
 import { INCHES_TO_MM, type PaperDefinition, getPaperDimensions } from '@domain/paper';
+import { useZoom } from '@web/hooks/useZoom';
 import { borderStyleToStrokeDasharray, borderStyleToStrokeWidth } from '@web/utils/svgHelpers';
+import { useEffect, useRef } from 'react';
 import { BoxSvg } from '../common/BoxSvg';
 import styles from './PreviewCanvas.module.css';
 
@@ -12,6 +14,21 @@ type PreviewCanvasProps = {
 };
 
 export function PreviewCanvas({ paper, boxes = [], lines = [] }: PreviewCanvasProps) {
+  const { scale, handleWheel, resetZoom } = useZoom();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        handleWheel(e);
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [handleWheel]);
+
   if (!paper) {
     return (
       <div className={styles.container}>
@@ -33,51 +50,61 @@ export function PreviewCanvas({ paper, boxes = [], lines = [] }: PreviewCanvasPr
   const sizeLabel = `${paper.size} ${paper.orientation === 'portrait' ? '縦' : '横'}`;
 
   return (
-    <div className={styles.container}>
-      <svg
-        className={styles.svg}
-        viewBox={viewBox}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label={`用紙プレビュー: ${sizeLabel}`}
-      >
-        <rect
-          x={0}
-          y={0}
-          width={dimensions.width}
-          height={dimensions.height}
-          fill="white"
-          stroke="#999"
-          strokeWidth={0.5}
-        />
-        <rect
-          x={marginLeft}
-          y={marginTop}
-          width={dimensions.width - marginLeft - marginRight}
-          height={dimensions.height - marginTop - marginBottom}
-          fill="none"
-          stroke="#ccc"
-          strokeWidth={0.3}
-          strokeDasharray="2 2"
-        />
-        <g transform={`translate(${marginLeft}, ${marginTop})`}>
-          {boxes.map((box) => (
-            <BoxSvg key={box.id} box={box} />
-          ))}
-          {lines.map((line) => (
-            <LineSvg key={line.id} line={line} />
-          ))}
-        </g>
-        <text
-          x={dimensions.width / 2}
-          y={dimensions.height - 4}
-          textAnchor="middle"
-          fontSize={5}
-          fill="#999"
+    <div className={styles.container} ref={containerRef}>
+      {scale !== 1.0 && (
+        <div className={styles.zoomIndicator}>
+          <span>{Math.round(scale * 100)}%</span>
+          <button type="button" className={styles.zoomReset} onClick={resetZoom}>
+            リセット
+          </button>
+        </div>
+      )}
+      <div className={styles.zoomWrapper} style={{ transform: `scale(${scale})` }}>
+        <svg
+          className={styles.svg}
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label={`用紙プレビュー: ${sizeLabel}`}
         >
-          {sizeLabel}
-        </text>
-      </svg>
+          <rect
+            x={0}
+            y={0}
+            width={dimensions.width}
+            height={dimensions.height}
+            fill="white"
+            stroke="#999"
+            strokeWidth={0.5}
+          />
+          <rect
+            x={marginLeft}
+            y={marginTop}
+            width={dimensions.width - marginLeft - marginRight}
+            height={dimensions.height - marginTop - marginBottom}
+            fill="none"
+            stroke="#ccc"
+            strokeWidth={0.3}
+            strokeDasharray="2 2"
+          />
+          <g transform={`translate(${marginLeft}, ${marginTop})`}>
+            {boxes.map((box) => (
+              <BoxSvg key={box.id} box={box} />
+            ))}
+            {lines.map((line) => (
+              <LineSvg key={line.id} line={line} />
+            ))}
+          </g>
+          <text
+            x={dimensions.width / 2}
+            y={dimensions.height - 4}
+            textAnchor="middle"
+            fontSize={5}
+            fill="#999"
+          >
+            {sizeLabel}
+          </text>
+        </svg>
+      </div>
     </div>
   );
 }
