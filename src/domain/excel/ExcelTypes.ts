@@ -14,6 +14,8 @@ export type RawCellStyle = {
     readonly bold?: boolean;
     readonly italic?: boolean;
     readonly color?: string;
+    readonly underline?: string;
+    readonly strikethrough?: boolean;
   };
   readonly border?: {
     readonly top?: RawBorderEdge;
@@ -28,6 +30,8 @@ export type RawCellStyle = {
     readonly horizontal?: string;
     readonly vertical?: string;
     readonly wrapText?: boolean;
+    readonly textRotation?: number;
+    readonly shrinkToFit?: boolean;
   };
 };
 

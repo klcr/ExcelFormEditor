@@ -402,6 +402,8 @@ function buildBoxes(
             bold: cell.style.font.bold,
             italic: cell.style.font.italic,
             color: cell.style.font.color,
+            underline: cell.style.font.underline,
+            strikethrough: cell.style.font.strikethrough,
           }
         : undefined,
       fill: cell.style.fill?.color ? { color: cell.style.fill.color } : undefined,
@@ -410,6 +412,8 @@ function buildBoxes(
             horizontal: resolveHorizontalAlignment(cell.style.alignment.horizontal),
             vertical: resolveVerticalAlignment(cell.style.alignment.vertical),
             wrapText: cell.style.alignment.wrapText,
+            textRotation: cell.style.alignment.textRotation,
+            shrinkToFit: cell.style.alignment.shrinkToFit,
           }
         : undefined,
     });
@@ -463,13 +467,27 @@ function computeCellRect(
 
 /** 水平配置の解決 */
 function resolveHorizontalAlignment(value?: string): HorizontalAlignment | undefined {
-  if (value === 'center' || value === 'right' || value === 'left') return value;
+  if (
+    value === 'center' ||
+    value === 'right' ||
+    value === 'left' ||
+    value === 'justify' ||
+    value === 'distributed'
+  )
+    return value;
   return undefined;
 }
 
 /** 垂直配置の解決（OOXML は "center" を使用、BoxTypes は "middle" を定義） */
 function resolveVerticalAlignment(value?: string): VerticalAlignment | undefined {
   if (value === 'center') return 'middle';
-  if (value === 'middle' || value === 'bottom' || value === 'top') return value;
+  if (
+    value === 'middle' ||
+    value === 'bottom' ||
+    value === 'top' ||
+    value === 'justify' ||
+    value === 'distributed'
+  )
+    return value;
   return undefined;
 }

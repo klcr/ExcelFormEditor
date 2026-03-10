@@ -5,6 +5,8 @@ export type FontEntry = {
   readonly bold?: boolean;
   readonly italic?: boolean;
   readonly color?: string;
+  readonly underline?: string;
+  readonly strikethrough?: boolean;
 };
 
 /** 塗りつぶし情報（styles.xml から抽出） */
@@ -40,6 +42,8 @@ export type XfEntry = {
     readonly horizontal?: string;
     readonly vertical?: string;
     readonly wrapText?: boolean;
+    readonly textRotation?: number;
+    readonly shrinkToFit?: boolean;
   };
 };
 

@@ -267,3 +267,52 @@ describe('resolveStyle', () => {
     expect(result).toEqual({});
   });
 });
+
+describe('parseStyles - 拡張属性', () => {
+  it('下線と取消線をパースする', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="3">
+    <font><u/><sz val="11"/><name val="Arial"/></font>
+    <font><u val="double"/><strike/><sz val="11"/><name val="Arial"/></font>
+    <font><sz val="11"/><name val="Arial"/></font>
+  </fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/></border></borders>
+  <cellXfs count="1"><xf fontId="0" fillId="0" borderId="0"/></cellXfs>
+</styleSheet>`;
+    const styles = parseStyles(xml);
+    expect(styles.fonts[0]?.underline).toBe('single');
+    expect(styles.fonts[0]?.strikethrough).toBeUndefined();
+    expect(styles.fonts[1]?.underline).toBe('double');
+    expect(styles.fonts[1]?.strikethrough).toBe(true);
+    expect(styles.fonts[2]?.underline).toBeUndefined();
+    expect(styles.fonts[2]?.strikethrough).toBeUndefined();
+  });
+
+  it('textRotation と shrinkToFit をパースする', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="1"><font><sz val="11"/><name val="Arial"/></font></fonts>
+  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/></border></borders>
+  <cellXfs count="3">
+    <xf fontId="0" fillId="0" borderId="0">
+      <alignment textRotation="90"/>
+    </xf>
+    <xf fontId="0" fillId="0" borderId="0">
+      <alignment textRotation="255" shrinkToFit="1"/>
+    </xf>
+    <xf fontId="0" fillId="0" borderId="0">
+      <alignment horizontal="center"/>
+    </xf>
+  </cellXfs>
+</styleSheet>`;
+    const styles = parseStyles(xml);
+    expect(styles.cellXfs[0]?.alignment?.textRotation).toBe(90);
+    expect(styles.cellXfs[0]?.alignment?.shrinkToFit).toBeUndefined();
+    expect(styles.cellXfs[1]?.alignment?.textRotation).toBe(255);
+    expect(styles.cellXfs[1]?.alignment?.shrinkToFit).toBe(true);
+    expect(styles.cellXfs[2]?.alignment?.textRotation).toBeUndefined();
+  });
+});

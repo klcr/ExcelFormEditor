@@ -30,6 +30,12 @@ const VALID_BORDER_STYLES = new Set<string>([
   'dashed',
   'double',
   'hair',
+  'dashDot',
+  'dashDotDot',
+  'mediumDashed',
+  'mediumDashDot',
+  'mediumDashDotDot',
+  'slantDashDot',
 ]);
 
 /** RawBorderEdge → BorderEdge に変換する */
