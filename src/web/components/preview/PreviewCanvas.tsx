@@ -59,52 +59,55 @@ export function PreviewCanvas({ paper, boxes = [], lines = [] }: PreviewCanvasPr
           </button>
         </div>
       )}
-      <div className={styles.zoomWrapper} style={{ transform: `scale(${scale})` }}>
-        <svg
-          className={styles.svg}
-          viewBox={viewBox}
-          preserveAspectRatio="xMidYMid meet"
-          role="img"
-          aria-label={`用紙プレビュー: ${sizeLabel}`}
+      <svg
+        className={styles.svg}
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={`用紙プレビュー: ${sizeLabel}`}
+        style={
+          scale !== 1.0
+            ? { transform: `scale(${scale})`, transformOrigin: 'center center' }
+            : undefined
+        }
+      >
+        <rect
+          x={0}
+          y={0}
+          width={dimensions.width}
+          height={dimensions.height}
+          fill="white"
+          stroke="#999"
+          strokeWidth={0.5}
+        />
+        <rect
+          x={marginLeft}
+          y={marginTop}
+          width={dimensions.width - marginLeft - marginRight}
+          height={dimensions.height - marginTop - marginBottom}
+          fill="none"
+          stroke="#ccc"
+          strokeWidth={0.3}
+          strokeDasharray="2 2"
+        />
+        <g transform={`translate(${marginLeft}, ${marginTop})`}>
+          {boxes.map((box) => (
+            <BoxSvg key={box.id} box={box} />
+          ))}
+          {lines.map((line) => (
+            <LineSvg key={line.id} line={line} />
+          ))}
+        </g>
+        <text
+          x={dimensions.width / 2}
+          y={dimensions.height - 4}
+          textAnchor="middle"
+          fontSize={5}
+          fill="#999"
         >
-          <rect
-            x={0}
-            y={0}
-            width={dimensions.width}
-            height={dimensions.height}
-            fill="white"
-            stroke="#999"
-            strokeWidth={0.5}
-          />
-          <rect
-            x={marginLeft}
-            y={marginTop}
-            width={dimensions.width - marginLeft - marginRight}
-            height={dimensions.height - marginTop - marginBottom}
-            fill="none"
-            stroke="#ccc"
-            strokeWidth={0.3}
-            strokeDasharray="2 2"
-          />
-          <g transform={`translate(${marginLeft}, ${marginTop})`}>
-            {boxes.map((box) => (
-              <BoxSvg key={box.id} box={box} />
-            ))}
-            {lines.map((line) => (
-              <LineSvg key={line.id} line={line} />
-            ))}
-          </g>
-          <text
-            x={dimensions.width / 2}
-            y={dimensions.height - 4}
-            textAnchor="middle"
-            fontSize={5}
-            fill="#999"
-          >
-            {sizeLabel}
-          </text>
-        </svg>
-      </div>
+          {sizeLabel}
+        </text>
+      </svg>
     </div>
   );
 }
