@@ -7,7 +7,7 @@ type BoxOverlayProps = {
 };
 
 const SELECTED_STROKE = '#2196F3';
-const SELECTED_STROKE_WIDTH = 0.3;
+const SELECTED_STROKE_WIDTH = 0.15;
 const HOVER_FILL = 'rgba(33, 150, 243, 0.05)';
 
 export function BoxOverlay({ box, isSelected, onSelect }: BoxOverlayProps) {

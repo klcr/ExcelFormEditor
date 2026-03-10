@@ -8,6 +8,7 @@ import { useKeyboardShortcuts } from '@web/hooks/useKeyboardShortcuts';
 import type { LayoutMode } from '@web/hooks/useLayoutMode';
 import { useSnap } from '@web/hooks/useSnap';
 import { useVariableEditor } from '@web/hooks/useVariableEditor';
+import { useZoom } from '@web/hooks/useZoom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BottomSheet } from '../common/BottomSheet';
 import { MergeAction } from './BoxEditor/MergeAction';
@@ -39,6 +40,20 @@ export function EditorLayout({
     useBoxEditor(initialBoxes, { snap });
   const { variables, actions: variableActions } = useVariableEditor();
   const [isPropertySheetOpen, setIsPropertySheetOpen] = useState(false);
+  const { scale, handleWheel, resetZoom } = useZoom();
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        handleWheel(e);
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [handleWheel]);
 
   const handleAssignSequentialVariables = useCallback(
     (params: {
@@ -217,32 +232,99 @@ export function EditorLayout({
         </button>
       </div>
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <div style={{ flex: 1 }}>
-          <EditorCanvas
-            boxes={boxes}
-            selectedBoxIds={selectedBoxIds}
-            isDragging={isDragging}
-            activeGuides={activeGuides}
-            onSelectBox={actions.selectBox}
-            onToggleBoxSelection={actions.toggleBoxSelection}
-            onDeselectAll={actions.deselectAll}
-            paperWidth={paperWidth}
-            paperHeight={paperHeight}
-          />
+        <div ref={canvasContainerRef} style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+          {scale !== 1.0 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 8px',
+                background: 'rgba(0, 0, 0, 0.6)',
+                color: '#fff',
+                borderRadius: 4,
+                fontSize: 12,
+                zIndex: 10,
+              }}
+            >
+              <span>{Math.round(scale * 100)}%</span>
+              <button
+                type="button"
+                onClick={resetZoom}
+                style={{
+                  background: 'transparent',
+                  color: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.5)',
+                  borderRadius: 3,
+                  padding: '1px 6px',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
+              >
+                リセット
+              </button>
+            </div>
+          )}
+          <div
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: 'center top',
+              width: '100%',
+              height: '100%',
+            }}
+          >
+            <EditorCanvas
+              boxes={boxes}
+              selectedBoxIds={selectedBoxIds}
+              isDragging={isDragging}
+              activeGuides={activeGuides}
+              onSelectBox={actions.selectBox}
+              onToggleBoxSelection={actions.toggleBoxSelection}
+              onDeselectAll={actions.deselectAll}
+              paperWidth={paperWidth}
+              paperHeight={paperHeight}
+            />
+          </div>
         </div>
-        <div style={{ width: '280px', borderLeft: '1px solid #ccc', overflow: 'auto' }}>
-          <PropertyPanel
-            selectedBoxIds={selectedBoxIds}
-            boxes={boxes}
-            onMove={actions.moveSelectedBoxes}
-            onResize={actions.resizeBox}
-            onUpdateBox={actions.updateBox}
-            variables={variables}
-            onAddVariable={variableActions.addVariable}
-            onRemoveVariable={variableActions.removeVariable}
-            onAssignSequentialVariables={handleAssignSequentialVariables}
-          />
-          <CssPreview boxes={boxes} selectedBoxIds={selectedBoxIds} />
+        <div
+          style={{
+            width: '280px',
+            borderLeft: '1px solid #ccc',
+            background: '#fafafa',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '8px 12px',
+              borderBottom: '1px solid #e0e0e0',
+              fontWeight: 600,
+              fontSize: 13,
+              color: '#555',
+              flexShrink: 0,
+            }}
+          >
+            プロパティ
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <PropertyPanel
+              selectedBoxIds={selectedBoxIds}
+              boxes={boxes}
+              onMove={actions.moveSelectedBoxes}
+              onResize={actions.resizeBox}
+              onUpdateBox={actions.updateBox}
+              variables={variables}
+              onAddVariable={variableActions.addVariable}
+              onRemoveVariable={variableActions.removeVariable}
+              onAssignSequentialVariables={handleAssignSequentialVariables}
+            />
+            <CssPreview boxes={boxes} selectedBoxIds={selectedBoxIds} />
+          </div>
         </div>
       </div>
     </div>
