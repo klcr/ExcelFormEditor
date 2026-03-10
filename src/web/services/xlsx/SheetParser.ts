@@ -72,13 +72,19 @@ export function parseWorksheet(
 
   // fitToPage は <sheetPr><pageSetUpPr fitToPage="1"/> から取得
   const fitToPage = parseFitToPage(ws.sheetPr);
+  const printOptions = parsePrintOptions(ws.printOptions);
+  const headerFooter = parseHeaderFooter(ws.headerFooter);
 
   return {
     cells,
     merges: parseMerges(ws.mergeCells),
     columnWidths,
     rowHeights,
-    pageSetup: parsePageSetup(ws.pageSetup, fitToPage),
+    pageSetup: {
+      ...parsePageSetup(ws.pageSetup, fitToPage),
+      ...printOptions,
+      ...(headerFooter !== undefined ? { headerFooter } : {}),
+    },
     margins: parseMargins(ws.pageMargins),
     rowBreaks,
   };
@@ -253,6 +259,55 @@ function parseMargins(node: unknown): Margins | null {
     right: toNumOr(o['@_right'], 0),
     header: toNumOr(o['@_header'], 0),
     footer: toNumOr(o['@_footer'], 0),
+  };
+}
+
+// --- Print Options ---
+
+function parsePrintOptions(node: unknown): {
+  horizontalCentered?: boolean;
+  verticalCentered?: boolean;
+} {
+  if (!isObj(node)) return {};
+  const o = node as Record<string, unknown>;
+  const h = toBool(o['@_horizontalCentered']);
+  const v = toBool(o['@_verticalCentered']);
+  return {
+    ...(h !== undefined ? { horizontalCentered: h } : {}),
+    ...(v !== undefined ? { verticalCentered: v } : {}),
+  };
+}
+
+// --- Header/Footer ---
+
+function parseHeaderFooter(node: unknown): RawPageSetup['headerFooter'] | undefined {
+  if (!isObj(node)) return undefined;
+  const o = node as Record<string, unknown>;
+
+  const oddHeader = extractText(o.oddHeader);
+  const oddFooter = extractText(o.oddFooter);
+  const evenHeader = extractText(o.evenHeader);
+  const evenFooter = extractText(o.evenFooter);
+  const firstHeader = extractText(o.firstHeader);
+  const firstFooter = extractText(o.firstFooter);
+
+  const hasContent = [oddHeader, oddFooter, evenHeader, evenFooter, firstHeader, firstFooter].some(
+    (c) => c !== undefined,
+  );
+  if (!hasContent) return undefined;
+
+  const alignWithMargins = toBool(o['@_alignWithMargins']);
+  const scaleWithDoc = toBool(o['@_scaleWithDoc']);
+
+  return {
+    ...(oddHeader !== undefined ? { oddHeader } : {}),
+    ...(oddFooter !== undefined ? { oddFooter } : {}),
+    ...(evenHeader !== undefined ? { evenHeader } : {}),
+    ...(evenFooter !== undefined ? { evenFooter } : {}),
+    ...(firstHeader !== undefined ? { firstHeader } : {}),
+    ...(firstFooter !== undefined ? { firstFooter } : {}),
+    ...(alignWithMargins !== undefined ? { alignWithMargins } : {}),
+    ...(scaleWithDoc !== undefined ? { scaleWithDoc } : {}),
   };
 }
 

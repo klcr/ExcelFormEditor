@@ -3,8 +3,11 @@ export type {
   Orientation,
   Margins,
   ScalingConfig,
+  PaperCentering,
   PaperDefinition,
 } from './PaperTypes';
+
+export type { HeaderFooterSection, HeaderFooterDefinition } from './HeaderFooterTypes';
 
 export {
   PAPER_DIMENSIONS,

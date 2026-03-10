@@ -43,6 +43,18 @@ export type RawCell = {
   readonly mergeRange?: string;
 };
 
+/** ヘッダー/フッター生データ */
+export type RawHeaderFooter = {
+  readonly oddHeader?: string;
+  readonly oddFooter?: string;
+  readonly evenHeader?: string;
+  readonly evenFooter?: string;
+  readonly firstHeader?: string;
+  readonly firstFooter?: string;
+  readonly alignWithMargins?: boolean;
+  readonly scaleWithDoc?: boolean;
+};
+
 /** ページ設定（生データ） */
 export type RawPageSetup = {
   /** Excel paperSize 番号（9=A4, 8=A3, 11=A5） */
@@ -53,6 +65,9 @@ export type RawPageSetup = {
   readonly fitToWidth?: number;
   readonly fitToHeight?: number;
   readonly printArea?: string;
+  readonly horizontalCentered?: boolean;
+  readonly verticalCentered?: boolean;
+  readonly headerFooter?: RawHeaderFooter;
 };
 
 /** シートデータ（生データ、ドメイン入力型） */

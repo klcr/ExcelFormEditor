@@ -91,8 +91,55 @@ function SheetDetail({ sheet }: { readonly sheet: SheetParseResult }) {
           </dd>
           <dt>印刷範囲</dt>
           <dd>{sheet.pageSetup.printArea ?? '未設定'}</dd>
+          <dt>水平中央揃え</dt>
+          <dd>{sheet.pageSetup.horizontalCentered ? 'はい' : 'いいえ'}</dd>
+          <dt>垂直中央揃え</dt>
+          <dd>{sheet.pageSetup.verticalCentered ? 'はい' : 'いいえ'}</dd>
         </dl>
       </Section>
+
+      {sheet.pageSetup.headerFooter && (
+        <Section title="ヘッダー/フッター">
+          <dl className={styles.dl}>
+            {sheet.pageSetup.headerFooter.oddHeader && (
+              <>
+                <dt>ヘッダー (奇数ページ)</dt>
+                <dd className={styles.cellValue}>{sheet.pageSetup.headerFooter.oddHeader}</dd>
+              </>
+            )}
+            {sheet.pageSetup.headerFooter.oddFooter && (
+              <>
+                <dt>フッター (奇数ページ)</dt>
+                <dd className={styles.cellValue}>{sheet.pageSetup.headerFooter.oddFooter}</dd>
+              </>
+            )}
+            {sheet.pageSetup.headerFooter.evenHeader && (
+              <>
+                <dt>ヘッダー (偶数ページ)</dt>
+                <dd className={styles.cellValue}>{sheet.pageSetup.headerFooter.evenHeader}</dd>
+              </>
+            )}
+            {sheet.pageSetup.headerFooter.evenFooter && (
+              <>
+                <dt>フッター (偶数ページ)</dt>
+                <dd className={styles.cellValue}>{sheet.pageSetup.headerFooter.evenFooter}</dd>
+              </>
+            )}
+            {sheet.pageSetup.headerFooter.firstHeader && (
+              <>
+                <dt>ヘッダー (先頭ページ)</dt>
+                <dd className={styles.cellValue}>{sheet.pageSetup.headerFooter.firstHeader}</dd>
+              </>
+            )}
+            {sheet.pageSetup.headerFooter.firstFooter && (
+              <>
+                <dt>フッター (先頭ページ)</dt>
+                <dd className={styles.cellValue}>{sheet.pageSetup.headerFooter.firstFooter}</dd>
+              </>
+            )}
+          </dl>
+        </Section>
+      )}
 
       <Section title="余白 (インチ)">
         {sheet.margins ? (

@@ -17,6 +17,7 @@ const defaultPaper: PaperDefinition = {
   margins: { top: 1.0, bottom: 1.0, left: 0.75, right: 0.75, header: 0.3, footer: 0.3 },
   scaling: { mode: 'scale', percent: 100 },
   printableArea: { width: 170, height: 257 },
+  centering: { horizontal: false, vertical: false },
 };
 
 describe('EditorLayout', () => {

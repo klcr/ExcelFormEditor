@@ -25,6 +25,12 @@ export type ScalingConfig =
       readonly height: number;
     };
 
+/** ページ中央揃え設定 */
+export type PaperCentering = {
+  readonly horizontal: boolean;
+  readonly vertical: boolean;
+};
+
 /** 用紙定義 */
 export type PaperDefinition = {
   readonly size: PaperSize;
@@ -32,6 +38,7 @@ export type PaperDefinition = {
   readonly margins: Margins;
   readonly scaling: ScalingConfig;
   readonly printableArea: Size;
+  readonly centering: PaperCentering;
 };
 
 /** 用紙物理寸法（mm、portrait基準） */

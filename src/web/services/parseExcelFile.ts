@@ -1,4 +1,4 @@
-import type { ParsedSheet, RawSheetData } from '@domain/excel';
+import type { ParsedSheet, RawHeaderFooter, RawSheetData } from '@domain/excel';
 import { parseSheet, splitByRowBreaks } from '@domain/excel';
 import { readXlsx } from './xlsx';
 
@@ -13,6 +13,9 @@ export type SheetParseResult = {
     readonly fitToWidth: number | undefined;
     readonly fitToHeight: number | undefined;
     readonly printArea: string | undefined;
+    readonly horizontalCentered: boolean | undefined;
+    readonly verticalCentered: boolean | undefined;
+    readonly headerFooter: RawHeaderFooter | undefined;
   };
   readonly margins: {
     readonly top: number;
@@ -114,6 +117,9 @@ function rawToDebugResult(raw: RawSheetData): SheetParseResult {
       fitToWidth: raw.pageSetup.fitToWidth,
       fitToHeight: raw.pageSetup.fitToHeight,
       printArea: raw.pageSetup.printArea,
+      horizontalCentered: raw.pageSetup.horizontalCentered,
+      verticalCentered: raw.pageSetup.verticalCentered,
+      headerFooter: raw.pageSetup.headerFooter,
     },
     margins: raw.margins,
     merges: raw.merges,
