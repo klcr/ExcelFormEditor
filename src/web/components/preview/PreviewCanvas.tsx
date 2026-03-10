@@ -1,6 +1,11 @@
 import type { BoxDefinition } from '@domain/box';
 import type { LineDefinition } from '@domain/line';
-import { INCHES_TO_MM, type PaperDefinition, getPaperDimensions } from '@domain/paper';
+import {
+  INCHES_TO_MM,
+  type PaperDefinition,
+  calculateCenteringOffset,
+  getPaperDimensions,
+} from '@domain/paper';
 import { useZoom } from '@web/hooks/useZoom';
 import { borderStyleToStrokeDasharray, borderStyleToStrokeWidth } from '@web/utils/svgHelpers';
 import { useEffect, useRef } from 'react';
@@ -49,6 +54,15 @@ export function PreviewCanvas({ paper, boxes = [], lines = [] }: PreviewCanvasPr
   const viewBox = `0 0 ${dimensions.width} ${dimensions.height}`;
   const sizeLabel = `${paper.size} ${paper.orientation === 'portrait' ? '縦' : '横'}`;
 
+  const centerOffset = calculateCenteringOffset(
+    paper.centering,
+    paper.printableArea,
+    boxes.map((b) => b.rect),
+    lines.flatMap((l) => [l.start, l.end]),
+  );
+  const translateX = marginLeft + centerOffset.x;
+  const translateY = marginTop + centerOffset.y;
+
   return (
     <div className={styles.container} ref={containerRef}>
       {scale !== 1.0 && (
@@ -59,52 +73,55 @@ export function PreviewCanvas({ paper, boxes = [], lines = [] }: PreviewCanvasPr
           </button>
         </div>
       )}
-      <div className={styles.zoomWrapper} style={{ transform: `scale(${scale})` }}>
-        <svg
-          className={styles.svg}
-          viewBox={viewBox}
-          preserveAspectRatio="xMidYMid meet"
-          role="img"
-          aria-label={`用紙プレビュー: ${sizeLabel}`}
+      <svg
+        className={styles.svg}
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={`用紙プレビュー: ${sizeLabel}`}
+        style={
+          scale !== 1.0
+            ? { transform: `scale(${scale})`, transformOrigin: 'center center' }
+            : undefined
+        }
+      >
+        <rect
+          x={0}
+          y={0}
+          width={dimensions.width}
+          height={dimensions.height}
+          fill="white"
+          stroke="#999"
+          strokeWidth={0.5}
+        />
+        <rect
+          x={marginLeft}
+          y={marginTop}
+          width={dimensions.width - marginLeft - marginRight}
+          height={dimensions.height - marginTop - marginBottom}
+          fill="none"
+          stroke="#ccc"
+          strokeWidth={0.3}
+          strokeDasharray="2 2"
+        />
+        <g transform={`translate(${translateX}, ${translateY})`}>
+          {boxes.map((box) => (
+            <BoxSvg key={box.id} box={box} />
+          ))}
+          {lines.map((line) => (
+            <LineSvg key={line.id} line={line} />
+          ))}
+        </g>
+        <text
+          x={dimensions.width / 2}
+          y={dimensions.height - 4}
+          textAnchor="middle"
+          fontSize={5}
+          fill="#999"
         >
-          <rect
-            x={0}
-            y={0}
-            width={dimensions.width}
-            height={dimensions.height}
-            fill="white"
-            stroke="#999"
-            strokeWidth={0.5}
-          />
-          <rect
-            x={marginLeft}
-            y={marginTop}
-            width={dimensions.width - marginLeft - marginRight}
-            height={dimensions.height - marginTop - marginBottom}
-            fill="none"
-            stroke="#ccc"
-            strokeWidth={0.3}
-            strokeDasharray="2 2"
-          />
-          <g transform={`translate(${marginLeft}, ${marginTop})`}>
-            {boxes.map((box) => (
-              <BoxSvg key={box.id} box={box} />
-            ))}
-            {lines.map((line) => (
-              <LineSvg key={line.id} line={line} />
-            ))}
-          </g>
-          <text
-            x={dimensions.width / 2}
-            y={dimensions.height - 4}
-            textAnchor="middle"
-            fontSize={5}
-            fill="#999"
-          >
-            {sizeLabel}
-          </text>
-        </svg>
-      </div>
+          {sizeLabel}
+        </text>
+      </svg>
     </div>
   );
 }
