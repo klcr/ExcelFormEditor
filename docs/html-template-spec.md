@@ -128,6 +128,15 @@ Excel Form Editor は Excel (.xlsx) で作成された帳票をパースし、We
 - `margin`: 用紙余白。元データは Excel のインチ単位の余白を `× 25.4` で mm 変換したもの
 - `page-break-after: always`: 各ページの後に改ページを挿入（最後のページを除く）
 
+### 4.1 ページ中央揃え
+
+Excel の「ページ中央」設定（水平 / 垂直）が有効な場合、印刷可能領域内でのコンテンツ配置に影響する。中央揃え情報は `<section>` の data 属性とマニフェストに保持され、外部システムが印刷時のレイアウト調整に利用できる。
+
+- **水平中央揃え** (`data-horizontal-centered="true"`): コンテンツを用紙の左右中央に配置
+- **垂直中央揃え** (`data-vertical-centered="true"`): コンテンツを用紙の上下中央に配置
+
+> **注**: 現在の CSS 出力では中央揃えのスタイルは自動適用されない。data 属性とマニフェストの情報を元に、外部システム側で必要に応じてレイアウト調整を行う。
+
 ## 5. `<section class="sheet">` — 用紙コンテナ
 
 ### 5.1 CSS プロパティ
@@ -157,7 +166,64 @@ style="position: relative; width: {printableWidth}mm; height: {printableHeight}m
 | `data-margin-right-mm` | number | `"19.1"` | 右余白 (mm) |
 | `data-margin-bottom-mm` | number | `"25.4"` | 下余白 (mm) |
 | `data-margin-left-mm` | number | `"19.1"` | 左余白 (mm) |
+| `data-horizontal-centered` | boolean | `"true"` | 水平中央揃え（`true` / `false`） |
+| `data-vertical-centered` | boolean | `"true"` | 垂直中央揃え（`true` / `false`） |
 | `data-origin` | string | `"printable-area"` | 座標系の原点（常に `printable-area`） |
+
+## 5A. ヘッダー/フッター
+
+### 5A.1 概要
+
+Excel のヘッダー/フッター設定（`<headerFooter>` 要素）から抽出された情報。ページの上端・下端に表示されるテキストで、ページ番号・日付・ファイル名などの動的コンテンツを含むことがある。
+
+### 5A.2 構造
+
+ヘッダー/フッターは **左 (L)・中央 (C)・右 (R)** の 3 セクションで構成される。Excel の OOXML 形式では `&L` `&C` `&R` でセクションを切り替える。
+
+```
+┌──────────────────────────────────────────┐
+│ [左セクション]  [中央セクション]  [右セクション] │  ← ヘッダー
+├──────────────────────────────────────────┤
+│                                          │
+│              印刷可能領域                 │
+│                                          │
+├──────────────────────────────────────────┤
+│ [左セクション]  [中央セクション]  [右セクション] │  ← フッター
+└──────────────────────────────────────────┘
+```
+
+### 5A.3 特殊コード
+
+ヘッダー/フッターの生テキストには以下の特殊コードが含まれる。パース後も保持される。
+
+| コード | 意味 | 例 |
+|--------|------|-----|
+| `&P` | ページ番号 | `1` |
+| `&N` | 総ページ数 | `5` |
+| `&D` | 現在の日付 | `2026/03/10` |
+| `&T` | 現在の時刻 | `14:30` |
+| `&F` | ファイル名 | `invoice.xlsx` |
+| `&A` | シート名 | `Sheet1` |
+| `&"FontName,Style"` | フォント指定 | `&"Arial,Bold"` |
+| `&数字` | フォントサイズ | `&12` |
+| `&&` | リテラル `&` | `&` |
+
+### 5A.4 マニフェスト内の表現
+
+ヘッダー/フッター情報はマニフェストの各ページエントリに `headerFooter` オブジェクトとして含まれる（8.2 節参照）。
+
+### 5A.5 種類
+
+| 種類 | OOXML 要素 | 説明 |
+|------|-----------|------|
+| 奇数ページヘッダー | `oddHeader` | デフォルトのヘッダー（通常すべてのページに適用） |
+| 奇数ページフッター | `oddFooter` | デフォルトのフッター |
+| 偶数ページヘッダー | `evenHeader` | 偶数ページ専用（「奇数/偶数ページ別指定」有効時） |
+| 偶数ページフッター | `evenFooter` | 偶数ページ専用 |
+| 先頭ページヘッダー | `firstHeader` | 先頭ページ専用（「先頭ページのみ別指定」有効時） |
+| 先頭ページフッター | `firstFooter` | 先頭ページ専用 |
+
+> **注**: 現在の HTML 出力ではヘッダー/フッターの描画は行わない。マニフェストに生データとパース済みセクション（L/C/R）の両方を保持し、外部システムが必要に応じてレンダリングする。
 
 ## 6. ボックス要素 `<div class="box">`
 
@@ -380,6 +446,20 @@ const manifest = JSON.parse(el.textContent);
           "right": 19.05,
           "bottom": 25.4,
           "left": 19.05
+        },
+        "centering": {
+          "horizontal": false,
+          "vertical": false
+        }
+      },
+      "headerFooter": {
+        "oddHeader": {
+          "raw": "&L&\"Arial,Bold\"&12ページ &P&C&D&R&F",
+          "sections": { "left": "&\"Arial,Bold\"&12ページ &P", "center": "&D", "right": "&F" }
+        },
+        "oddFooter": {
+          "raw": "&Cページ &P / &N",
+          "sections": { "left": "", "center": "ページ &P / &N", "right": "" }
         }
       },
       "fields": [
@@ -423,8 +503,39 @@ const manifest = JSON.parse(el.textContent);
 |-----------|-----|------|
 | `pageIndex` | number | ページインデックス（0始まり、HTML の `data-page-index` と一致） |
 | `sheetName` | string | 元の Excel シート名 |
-| `paper` | object | このページの用紙情報（サイズ・方向・余白、すべて mm 単位） |
+| `paper` | object | このページの用紙情報（サイズ・方向・余白・中央揃え、すべて mm 単位） |
+| `headerFooter` | object \| undefined | ヘッダー/フッター情報（存在する場合のみ） |
 | `fields` | array | このページの変数バインディング一覧 |
+
+### 8.4a `paper.centering` オブジェクト
+
+| フィールド | 型 | デフォルト | 説明 |
+|-----------|-----|----------|------|
+| `horizontal` | boolean | `false` | 水平中央揃えが有効か |
+| `vertical` | boolean | `false` | 垂直中央揃えが有効か |
+
+### 8.4b `headerFooter` オブジェクト
+
+存在する場合、以下のキーを持つ。各キーは省略可能（Excel で設定されている場合のみ出力）。
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `oddHeader` | object | 奇数ページヘッダー（デフォルトヘッダー） |
+| `oddFooter` | object | 奇数ページフッター（デフォルトフッター） |
+| `evenHeader` | object | 偶数ページヘッダー |
+| `evenFooter` | object | 偶数ページフッター |
+| `firstHeader` | object | 先頭ページヘッダー |
+| `firstFooter` | object | 先頭ページフッター |
+
+各ヘッダー/フッターオブジェクトの構造:
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `raw` | string | Excel の生テキスト（特殊コード含む） |
+| `sections` | object | パース済み 3 セクション |
+| `sections.left` | string | 左セクションのテキスト |
+| `sections.center` | string | 中央セクションのテキスト |
+| `sections.right` | string | 右セクションのテキスト |
 
 ### 8.5 `fields` 配列の要素
 
@@ -571,6 +682,8 @@ document.querySelectorAll('.sheet').forEach(sheet => {
   data-margin-right-mm="19.1"
   data-margin-bottom-mm="25.4"
   data-margin-left-mm="19.1"
+  data-horizontal-centered="false"
+  data-vertical-centered="false"
   data-origin="printable-area"
   style="position: relative; width: 171.9mm; height: 246.2mm; overflow: hidden;">
 
@@ -616,6 +729,8 @@ document.querySelectorAll('.sheet').forEach(sheet => {
   data-margin-right-mm="19.1"
   data-margin-bottom-mm="25.4"
   data-margin-left-mm="19.1"
+  data-horizontal-centered="false"
+  data-vertical-centered="false"
   data-origin="printable-area"
   style="position: relative; width: 171.9mm; height: 246.2mm; overflow: hidden;">
 
@@ -648,6 +763,16 @@ document.querySelectorAll('.sheet').forEach(sheet => {
           "right": 19.05,
           "bottom": 25.4,
           "left": 19.05
+        },
+        "centering": {
+          "horizontal": false,
+          "vertical": false
+        }
+      },
+      "headerFooter": {
+        "oddFooter": {
+          "raw": "&Cページ &P / &N",
+          "sections": { "left": "", "center": "ページ &P / &N", "right": "" }
         }
       },
       "fields": [
@@ -674,6 +799,10 @@ document.querySelectorAll('.sheet').forEach(sheet => {
           "right": 19.05,
           "bottom": 25.4,
           "left": 19.05
+        },
+        "centering": {
+          "horizontal": false,
+          "vertical": false
         }
       },
       "fields": []
