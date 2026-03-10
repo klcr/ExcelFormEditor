@@ -33,3 +33,5 @@ export {
   applyScale,
   applyScaleToSize,
 } from './CoordinateConverter';
+
+export { calculateCenteringOffset, calculateContentBounds } from './CenteringOffset';

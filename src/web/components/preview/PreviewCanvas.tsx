@@ -1,6 +1,11 @@
 import type { BoxDefinition } from '@domain/box';
 import type { LineDefinition } from '@domain/line';
-import { INCHES_TO_MM, type PaperDefinition, getPaperDimensions } from '@domain/paper';
+import {
+  INCHES_TO_MM,
+  type PaperDefinition,
+  calculateCenteringOffset,
+  getPaperDimensions,
+} from '@domain/paper';
 import { useZoom } from '@web/hooks/useZoom';
 import { borderStyleToStrokeDasharray, borderStyleToStrokeWidth } from '@web/utils/svgHelpers';
 import { useEffect, useRef } from 'react';
@@ -49,6 +54,15 @@ export function PreviewCanvas({ paper, boxes = [], lines = [] }: PreviewCanvasPr
   const viewBox = `0 0 ${dimensions.width} ${dimensions.height}`;
   const sizeLabel = `${paper.size} ${paper.orientation === 'portrait' ? '縦' : '横'}`;
 
+  const centerOffset = calculateCenteringOffset(
+    paper.centering,
+    paper.printableArea,
+    boxes.map((b) => b.rect),
+    lines.flatMap((l) => [l.start, l.end]),
+  );
+  const translateX = marginLeft + centerOffset.x;
+  const translateY = marginTop + centerOffset.y;
+
   return (
     <div className={styles.container} ref={containerRef}>
       {scale !== 1.0 && (
@@ -90,7 +104,7 @@ export function PreviewCanvas({ paper, boxes = [], lines = [] }: PreviewCanvasPr
           strokeWidth={0.3}
           strokeDasharray="2 2"
         />
-        <g transform={`translate(${marginLeft}, ${marginTop})`}>
+        <g transform={`translate(${translateX}, ${translateY})`}>
           {boxes.map((box) => (
             <BoxSvg key={box.id} box={box} />
           ))}
