@@ -355,3 +355,90 @@ describe('hidden rows and columns', () => {
     expect(result.columnWidths[2]).toBe(10);
   });
 });
+
+// --- ページ中央揃えテスト ---
+
+describe('printOptions', () => {
+  it('水平・垂直中央揃えを抽出する', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData/>
+      <printOptions horizontalCentered="1" verticalCentered="1"/>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    expect(result.pageSetup.horizontalCentered).toBe(true);
+    expect(result.pageSetup.verticalCentered).toBe(true);
+  });
+
+  it('水平のみ中央揃えを抽出する', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData/>
+      <printOptions horizontalCentered="1"/>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    expect(result.pageSetup.horizontalCentered).toBe(true);
+    expect(result.pageSetup.verticalCentered).toBeUndefined();
+  });
+
+  it('printOptions が無い場合は中央揃えは設定されない', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData/>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    expect(result.pageSetup.horizontalCentered).toBeUndefined();
+    expect(result.pageSetup.verticalCentered).toBeUndefined();
+  });
+});
+
+// --- ヘッダー/フッターテスト ---
+
+describe('headerFooter', () => {
+  it('headerFooter を抽出する', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData/>
+      <headerFooter>
+        <oddHeader>&amp;L左&amp;C中央&amp;R右</oddHeader>
+        <oddFooter>&amp;Lフッター左&amp;R&amp;P/&amp;N</oddFooter>
+      </headerFooter>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    expect(result.pageSetup.headerFooter).toBeDefined();
+    expect(result.pageSetup.headerFooter?.oddHeader).toBe('&L左&C中央&R右');
+    expect(result.pageSetup.headerFooter?.oddFooter).toBe('&Lフッター左&R&P/&N');
+  });
+
+  it('headerFooter が無い場合は undefined を返す', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData/>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    expect(result.pageSetup.headerFooter).toBeUndefined();
+  });
+
+  it('空の headerFooter 要素は undefined を返す', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData/>
+      <headerFooter/>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    expect(result.pageSetup.headerFooter).toBeUndefined();
+  });
+
+  it('headerFooter の属性を抽出する', () => {
+    const xml = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      <sheetData/>
+      <headerFooter alignWithMargins="1" scaleWithDoc="0">
+        <oddHeader>&amp;Cタイトル</oddHeader>
+      </headerFooter>
+    </worksheet>`;
+
+    const result = parseWorksheet(xml, [], null);
+    expect(result.pageSetup.headerFooter?.alignWithMargins).toBe(true);
+    expect(result.pageSetup.headerFooter?.scaleWithDoc).toBe(false);
+  });
+});

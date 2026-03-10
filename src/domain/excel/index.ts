@@ -3,6 +3,7 @@ export type {
   RawCell,
   RawCellStyle,
   RawExcelData,
+  RawHeaderFooter,
   RawPageSetup,
   RawSheetData,
 } from './ExcelTypes';

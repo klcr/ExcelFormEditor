@@ -7,6 +7,7 @@ import {
   DEFAULT_MARGINS,
   type Margins,
   type Orientation,
+  type PaperCentering,
   type PaperDefinition,
   type PaperSize,
   type ScalingConfig,
@@ -193,6 +194,7 @@ function buildPaperDefinition(pageSetup: RawPageSetup, margins: Margins | null):
   const paperSize = resolvePaperSize(pageSetup.paperSize);
   const orientation = resolveOrientation(pageSetup.orientation);
   const scaling = resolveScaling(pageSetup);
+  const centering = resolveCentering(pageSetup);
   const resolvedMargins = margins ?? DEFAULT_MARGINS;
 
   const result = createPaperDefinition({
@@ -200,6 +202,7 @@ function buildPaperDefinition(pageSetup: RawPageSetup, margins: Margins | null):
     orientation,
     margins: resolvedMargins,
     scaling,
+    centering,
   });
 
   if (!result.ok) {
@@ -208,6 +211,7 @@ function buildPaperDefinition(pageSetup: RawPageSetup, margins: Margins | null):
       size: paperSize,
       orientation,
       scaling,
+      centering,
     });
     if (!fallback.ok) {
       throw new Error(`用紙定義の生成に失敗しました: ${fallback.error}`);
@@ -216,6 +220,14 @@ function buildPaperDefinition(pageSetup: RawPageSetup, margins: Margins | null):
   }
 
   return result.paper;
+}
+
+/** pageSetup → PaperCentering */
+export function resolveCentering(pageSetup: RawPageSetup): PaperCentering {
+  return {
+    horizontal: pageSetup.horizontalCentered ?? false,
+    vertical: pageSetup.verticalCentered ?? false,
+  };
 }
 
 /** Excel paperSize 番号 → PaperSize（未知は A4） */

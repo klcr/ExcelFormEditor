@@ -12,6 +12,7 @@ const PAPER: PaperDefinition = {
   margins: DEFAULT_MARGINS,
   scaling: { mode: 'scale', percent: 100 },
   printableArea: { width: 171.45, height: 246.38 },
+  centering: { horizontal: false, vertical: false },
 };
 
 describe('exportAsHtml', () => {

@@ -180,4 +180,33 @@ describe('createPaperDefinition', () => {
     });
     expect(result.ok).toBe(false);
   });
+
+  it('centering 未指定時はデフォルト（false/false）が適用される', () => {
+    const result = createPaperDefinition({
+      size: 'A4',
+      orientation: 'portrait',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.paper.centering).toEqual({
+        horizontal: false,
+        vertical: false,
+      });
+    }
+  });
+
+  it('centering を指定した場合に反映される', () => {
+    const result = createPaperDefinition({
+      size: 'A4',
+      orientation: 'portrait',
+      centering: { horizontal: true, vertical: true },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.paper.centering).toEqual({
+        horizontal: true,
+        vertical: true,
+      });
+    }
+  });
 });

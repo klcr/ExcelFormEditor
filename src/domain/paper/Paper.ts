@@ -5,6 +5,7 @@ import {
   type Margins,
   type Orientation,
   PAPER_DIMENSIONS,
+  type PaperCentering,
   type PaperDefinition,
   type PaperSize,
   type ScalingConfig,
@@ -80,6 +81,7 @@ export type CreatePaperParams = {
   readonly orientation: Orientation;
   readonly margins?: Partial<Margins>;
   readonly scaling?: ScalingConfig;
+  readonly centering?: PaperCentering;
 };
 
 /**
@@ -98,6 +100,10 @@ export function createPaperDefinition(
     mode: 'scale',
     percent: 100,
   };
+  const centering: PaperCentering = params.centering ?? {
+    horizontal: false,
+    vertical: false,
+  };
   const printableArea = calculatePrintableArea(params.size, params.orientation, validation.margins);
 
   return {
@@ -108,6 +114,7 @@ export function createPaperDefinition(
       margins: validation.margins,
       scaling,
       printableArea,
+      centering,
     },
   };
 }
